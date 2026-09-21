@@ -1,7 +1,7 @@
 APP=tonalmaster
 GO=go
 
-.PHONY: run test build fmt tidy up down logs
+.PHONY: run test build fmt tidy up down logs reset-db
 
 run:
 	$(GO) run ./cmd/server
@@ -26,3 +26,6 @@ down:
 
 logs:
 	docker compose logs -f api
+
+reset-db:
+	docker compose down -v
