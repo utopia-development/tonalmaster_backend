@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -81,17 +80,11 @@ func corsMiddleware(allowedOrigins []string, next http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID")
 		}
 
-		if r.Method == http.MethodOptions {
-			if origin != "" {
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
+		if r.Method == http.MethodOptions && origin != "" {
+			w.WriteHeader(http.StatusNoContent)
+			return
 		}
 
 		next.ServeHTTP(w, r)
 	})
-}
-
-func _unused() {
-	_ = strings.TrimSpace
 }
