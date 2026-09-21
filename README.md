@@ -12,14 +12,20 @@ Auth por sesión ya cableada (ver `docs/auth-sesiones.md`); forma parte del inic
 
 1. Copia `.env.example` a `.env` y ajusta valores si es necesario.
 2. Ejecuta `make up`.
-3. Comprueba:
+3. `make up` levanta PostgreSQL, ejecuta automáticamente las migraciones y después inicia la API. No necesitas `psql` para el flujo normal.
+
+   Para una instalación limpia desde cero puedes usar `make reset-db` y después `make up`.
+
+4. Comprueba:
    - `GET http://localhost:8080/health`
    - `GET http://localhost:8080/ready`
    - `GET http://localhost:8080/api/v1/calendars`
 
 `/health`, `/ready` y los endpoints de `calendars` no dependen del esquema de base de datos y responderán aunque no hayas aplicado migraciones. **Los endpoints de `auth`, `events` e `interpretations` sí las requieren.**
 
-4. Aplica las migraciones contra el Postgres levantado por `docker-compose.yml` (puerto expuesto por defecto: `5432`, credenciales en `.env`):
+El flujo normal no requiere aplicar migraciones manualmente. El servicio `migrate` de Compose espera a que PostgreSQL esté saludable y ejecuta las migraciones versionadas antes de arrancar la API.
+
+Para desarrollo avanzado, las migraciones también pueden ejecutarse manualmente:
 
    ```bash
    psql -h localhost -U ule_user -d ule_tonalmaster -f migrations/000001_init_schema.up.sql
