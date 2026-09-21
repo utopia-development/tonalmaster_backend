@@ -11,6 +11,7 @@ import (
 
 	"github.com/utopia-development/tonalmaster_backend/internal/config"
 	"github.com/utopia-development/tonalmaster_backend/internal/database"
+	"github.com/utopia-development/tonalmaster_backend/internal/domain/calendars"
 	"github.com/utopia-development/tonalmaster_backend/internal/handlers"
 )
 
@@ -19,58 +20,43 @@ func main() {
 	slog.SetDefault(logger)
 
 	cfg, err := config.Load()
-	if err != nil {
-		logger.Error("configuration failed", "error", err)
-		os.Exit(1)
-	}
+	if err != nil { logger.Error("configuration failed", "error", err); os.Exit(1) }
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	db, err := database.NewPool(ctx, cfg.DatabaseURL)
-	if err != nil {
-		logger.Error("database initialization failed", "error", err)
-		os.Exit(1)
-	}
+	if err != nil { logger.Error("database initialization failed", "error", err); os.Exit(1) }
 	defer db.Close()
 
+	registry := calendars.NewRegistry(calendars.NewTonalpohualliCASO())
 	health := handlers.NewHealthHandler(db)
+	calendarHandler := handlers.NewCalendarHandler(registry)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", health.Health)
 	mux.HandleFunc("GET /ready", health.Ready)
+	mux.HandleFunc("GET /api/v1/calendars", calendarHandler.List)
+	mux.HandleFunc("GET /api/v1/calendars/{id}", calendarHandler.Get)
+	mux.HandleFunc("GET /api/v1/calendars/convert", calendarHandler.Convert)
 
-	server := &http.Server{
-		Addr:              cfg.Address(),
-		Handler:           corsMiddleware(cfg.CORSAllowedOrigins, mux),
-		ReadHeaderTimeout: 5 * time.Second,
-		IdleTimeout:       60 * time.Second,
-	}
+	server := &http.Server{Addr: cfg.Address(), Handler: corsMiddleware(cfg.CORSAllowedOrigins, mux), ReadHeaderTimeout: 5 * time.Second, IdleTimeout: 60 * time.Second}
 
 	go func() {
 		logger.Info("server started", "addr", cfg.Address(), "env", cfg.Env)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("server stopped unexpectedly", "error", err)
-			stop()
-		}
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed { logger.Error("server stopped unexpectedly", "error", err); stop() }
 	}()
 
 	<-ctx.Done()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		logger.Error("graceful shutdown failed", "error", err)
-		os.Exit(1)
-	}
+	if err := server.Shutdown(shutdownCtx); err != nil { logger.Error("graceful shutdown failed", "error", err); os.Exit(1) }
 	logger.Info("server stopped")
 }
 
 func corsMiddleware(allowedOrigins []string, next http.Handler) http.Handler {
 	allowed := make(map[string]struct{}, len(allowedOrigins))
-	for _, origin := range allowedOrigins {
-		allowed[origin] = struct{}{}
-	}
-
+	for _, origin := range allowedOrigins { allowed[origin] = struct{}{} }
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 		if _, ok := allowed[origin]; ok {
@@ -79,12 +65,7 @@ func corsMiddleware(allowedOrigins []string, next http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID")
 		}
-
-		if r.Method == http.MethodOptions && origin != "" {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
+		if r.Method == http.MethodOptions && origin != "" { w.WriteHeader(http.StatusNoContent); return }
 		next.ServeHTTP(w, r)
 	})
 }
