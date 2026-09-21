@@ -39,6 +39,11 @@ Consulta `docs/planeacion.md` para el alcance.
 - `POST /api/v1/auth/login`
 - `GET /api/v1/auth/me`
 - `POST /api/v1/auth/logout`
+- `POST /api/v1/events` (auth)
+- `GET /api/v1/events` (auth)
+- `DELETE /api/v1/events/{id}` (auth)
+- `POST /api/v1/interpretations` (auth)
+- `GET /api/v1/interpretations?system=...&date=YYYY-MM-DD`
 
 Los errores usan el formato JSON `{"error":{"code":"...","message":"..."}}`.
 
