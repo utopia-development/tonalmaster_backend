@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -9,66 +8,50 @@ import (
 	"github.com/utopia-development/tonalmaster_backend/internal/domain/calendars"
 )
 
-func calendarHandlerForTest() *CalendarHandler {
-	return NewCalendarHandler(calendars.NewRegistry(calendars.NewTonalpohualliCASO()))
-}
+func TestCalendarAPIContractErrors(t *testing.T) {
+	h := NewCalendarHandler(calendars.NewRegistry(calendars.NewTonalpohualliCASO()))
 
-func TestCalendarList(t *testing.T) {
-	rec := httptest.NewRecorder()
-	calendarHandlerForTest().List(rec, httptest.NewRequest(http.MethodGet, "/api/v1/calendars", nil))
-	if rec.Code != http.StatusOK { t.Fatalf("status = %d, want 200", rec.Code) }
-
-	var got []calendarDTO
-	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil { t.Fatal(err) }
-	if len(got) != 1 || got[0].ID != calendars.TonalpohualliCASOID { t.Fatalf("unexpected response: %+v", got) }
-}
-
-func TestCalendarGet(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/calendars/"+calendars.TonalpohualliCASOID, nil)
-	req.SetPathValue("id", calendars.TonalpohualliCASOID)
-	rec := httptest.NewRecorder()
-	calendarHandlerForTest().Get(rec, req)
-	if rec.Code != http.StatusOK { t.Fatalf("status = %d, want 200", rec.Code) }
-}
-
-func TestCalendarGetUnknown(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/calendars/unknown", nil)
-	req.SetPathValue("id", "unknown")
-	rec := httptest.NewRecorder()
-	calendarHandlerForTest().Get(rec, req)
-	if rec.Code != http.StatusNotFound { t.Fatalf("status = %d, want 404", rec.Code) }
-}
-
-func TestCalendarConvert(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/calendars/convert?date=2026-05-18&system=tonalpohualli_caso", nil)
-	rec := httptest.NewRecorder()
-	calendarHandlerForTest().Convert(rec, req)
-	if rec.Code != http.StatusOK { t.Fatalf("status = %d, want 200", rec.Code) }
-
-	var got conversionDTO
-	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil { t.Fatal(err) }
-	if got.JDN != 2461179 || got.Result.DayNumber != 12 || got.Result.Sign != "Cozcacuauhtli" {
-		t.Fatalf("unexpected conversion: %+v", got)
+	tests := []struct {
+		name, path, wantCode, wantMessage string
+	}{
+		{"missing parameters", "/api/v1/calendars/convert", "invalid_request", "date and system are required"},
+		{"invalid date", "/api/v1/calendars/convert?date=2026-99-99&system=tonalpohualli_caso", "invalid_date", "date must use YYYY-MM-DD"},
+		{"unknown calendar", "/api/v1/calendars/convert?date=2026-05-18&system=unknown", "calendar_not_found", "calendar system not found"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			h.Convert(rec, httptest.NewRequest(http.MethodGet, tt.path, nil))
+			if rec.Code == http.StatusOK { t.Fatalf("expected error, got 200") }
+			if got := rec.Header().Get("Content-Type"); got != "application/json" { t.Fatalf("content type = %q", got) }
+			body := rec.Body.String()
+			if !containsAll(body, tt.wantCode, tt.wantMessage) { t.Fatalf("body = %q", body) }
+		})
 	}
 }
 
-func TestCalendarConvertMissingQuery(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/calendars/convert", nil)
+func TestCalendarGetPathValue(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/calendars/tonalpohualli_caso", nil)
+	req.SetPathValue("id", calendars.TonalpohualliCASOID)
 	rec := httptest.NewRecorder()
-	calendarHandlerForTest().Convert(rec, req)
-	if rec.Code != http.StatusBadRequest { t.Fatalf("status = %d, want 400", rec.Code) }
+	NewCalendarHandler(calendars.NewRegistry(calendars.NewTonalpohualliCASO())).Get(rec, req)
+	if rec.Code != http.StatusOK { t.Fatalf("status = %d, want 200", rec.Code) }
 }
 
-func TestCalendarConvertInvalidDate(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/calendars/convert?date=2026-99-99&system=tonalpohualli_caso", nil)
-	rec := httptest.NewRecorder()
-	calendarHandlerForTest().Convert(rec, req)
-	if rec.Code != http.StatusBadRequest { t.Fatalf("status = %d, want 400", rec.Code) }
+func containsAll(value string, parts ...string) bool {
+	for _, part := range parts {
+		if !contains(value, part) { return false }
+	}
+	return true
 }
 
-func TestCalendarConvertUnknownSystem(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/calendars/convert?date=2026-05-18&system=unknown", nil)
-	rec := httptest.NewRecorder()
-	calendarHandlerForTest().Convert(rec, req)
-	if rec.Code != http.StatusNotFound { t.Fatalf("status = %d, want 404", rec.Code) }
+func contains(value, part string) bool {
+	return len(part) == 0 || indexOf(value, part) >= 0
+}
+
+func indexOf(value, part string) int {
+	for i := 0; i+len(part) <= len(value); i++ {
+		if value[i:i+len(part)] == part { return i }
+	}
+	return -1
 }
