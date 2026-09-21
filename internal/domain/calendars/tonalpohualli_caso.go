@@ -1,17 +1,28 @@
 package calendars
 
-import (
-	"time"
+import "time"
+
+const (
+	TonalpohualliCASOID = "tonalpohualli_caso"
+	// CASOAnchorJDN is the Julian Day Number for 13 Aug 1521 (Julian),
+	// identified as 1-Coatl and the beginning of trecena 1 in the
+	// documented Alfonso Caso correlation.
+	CASOAnchorJDN int64 = 2276828
 )
 
-const TonalpohualliCASOID = "tonalpohualli_caso"
+var tonalpohualliSigns = [...]string{
+	"Cipactli", "Ehecatl", "Calli", "Cuetzpalin", "Coatl",
+	"Miquiztli", "Mazatl", "Tochtli", "Atl", "Itzcuintli",
+	"Ozomahtli", "Malinalli", "Acatl", "Ocelotl", "Cuauhtli",
+	"Cozcacuauhtli", "Ollin", "Tecpatl", "Quiahuitl", "Xochitl",
+}
 
 type TonalpohualliCASO struct {
 	BaseJDN int64
 }
 
-func NewTonalpohualliCASO(baseJDN int64) TonalpohualliCASO {
-	return TonalpohualliCASO{BaseJDN: baseJDN}
+func NewTonalpohualliCASO() TonalpohualliCASO {
+	return TonalpohualliCASO{BaseJDN: CASOAnchorJDN}
 }
 
 func (s TonalpohualliCASO) ID() string {
@@ -22,24 +33,12 @@ func (s TonalpohualliCASO) Convert(date time.Time) (Result, error) {
 	jdn := GregorianToJDN(date)
 	offset := mod(jdn-s.BaseJDN, 260)
 
-	// The correlation-specific mapping is intentionally isolated here.
-	// These coefficients must be confirmed against the authoritative
-	// correlation before adding calendar-result fixtures.
 	return Result{
-		System: s.ID(),
-		Date: date,
-		JDN: jdn,
-		Trecena: mod(offset, 13) + 1,
-		Sign: "",
-		DayNumber: mod(offset, 20) + 1,
-		NightLord: "",
+		System:    s.ID(),
+		Date:      date,
+		JDN:       jdn,
+		Trecena:   offset/13 + 1,
+		Sign:      tonalpohualliSigns[mod(offset+4, 20)],
+		DayNumber: mod(offset, 13) + 1,
 	}, nil
-}
-
-func mod(value, divisor int64) int {
-	r := value % divisor
-	if r < 0 {
-		return int(r + divisor)
-	}
-	return int(r)
 }
