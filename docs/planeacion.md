@@ -112,7 +112,7 @@ Aplicar:
 
 ---
 
-**Estado:** Fases 1–5 en implementación; la Fase 5 agrega cobertura de contrato HTTP y validación limpia de migraciones en CI. La Fase 4 queda cerrada cuando el pipeline asociado a estos cambios termine en `success`.
+**Estado:** Fases 1–5 cerradas en código (dominio + API calendarios + tests + CI de migraciones). Auth por sesión iniciada (migración `000002`, handlers `/api/v1/auth/*`); documentada en `docs/auth-sesiones.md`. Siguiente foco Fase 6: migraciones al arranque, endpoints autenticados de events/interpretations, endurecer tests de auth HTTP.
 
 ## Alcance transversal
 

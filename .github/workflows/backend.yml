@@ -31,11 +31,15 @@ jobs:
       - run: go mod tidy
       - run: go test ./...
       - run: go build ./...
-      - name: Apply initial migration
+      - name: Apply migrations
         env:
           PGPASSWORD: test
-        run: psql -h 127.0.0.1 -U test -d tonalmaster_test -f migrations/000001_init_schema.up.sql
-      - name: Roll back initial migration
+        run: |
+          psql -h 127.0.0.1 -U test -d tonalmaster_test -f migrations/000001_init_schema.up.sql
+          psql -h 127.0.0.1 -U test -d tonalmaster_test -f migrations/000002_sessions.up.sql
+      - name: Roll back migrations
         env:
           PGPASSWORD: test
-        run: psql -h 127.0.0.1 -U test -d tonalmaster_test -f migrations/000001_init_schema.down.sql
+        run: |
+          psql -h 127.0.0.1 -U test -d tonalmaster_test -f migrations/000002_sessions.down.sql
+          psql -h 127.0.0.1 -U test -d tonalmaster_test -f migrations/000001_init_schema.down.sql

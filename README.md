@@ -4,7 +4,9 @@ Backend base de Tonalmaster siguiendo la arquitectura y planeación documentadas
 
 ## Fase actual
 
-Fase 1: base ejecutable. Incluye configuración por entorno, PostgreSQL, Docker Compose, logs estructurados y endpoints de salud.
+Fases 1–5 cerradas (base, migraciones, dominio calendárico CASO, API v1, tests de contrato).
+
+Auth por sesión ya cableada (ver `docs/auth-sesiones.md`); forma parte del inicio de la Fase 6.
 
 ## Desarrollo local
 
@@ -33,5 +35,11 @@ Consulta `docs/planeacion.md` para el alcance.
 - `GET /api/v1/calendars`
 - `GET /api/v1/calendars/{id}`
 - `GET /api/v1/calendars/convert?date=YYYY-MM-DD&system=tonalpohualli_caso`
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `GET /api/v1/auth/me`
+- `POST /api/v1/auth/logout`
 
 Los errores usan el formato JSON `{"error":{"code":"...","message":"..."}}`.
+
+Detalle de sesiones: `docs/auth-sesiones.md`.
