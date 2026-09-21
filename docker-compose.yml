@@ -15,6 +15,19 @@ services:
       timeout: 5s
       retries: 10
 
+  migrate:
+    image: migrate/migrate:v4.18.3
+    volumes:
+      - ./migrations:/migrations:ro
+    command:
+      - -path=/migrations
+      - -database=${DATABASE_URL:-postgres://ule_user:secure_password@db:5432/ule_tonalmaster?sslmode=disable}
+      - up
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
   api:
     build: .
     environment:
@@ -28,6 +41,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   pgdata:
