@@ -50,6 +50,12 @@ El token en claro **nunca** se guarda; solo el hash.
 
 Orígenes permitidos reciben `Access-Control-Allow-Credentials: true` para que el frontend pueda enviar cookies en cross-origin (localhost:3000 / 5173).
 
+## Uso en Fase 6
+
+`events` y la creación de `interpretations` requieren sesión válida mediante cookie `tonalmaster_session` o `Authorization: Bearer <token>`. El middleware `RequireAuth` carga el usuario autenticado en el contexto de la petición.
+
+Las consultas públicas de interpretaciones requieren `system` y `date` y no requieren sesión.
+
 ## Deuda conocida
 
 - Sin middleware genérico de autenticación (solo `/me` consume sesión).
