@@ -112,6 +112,8 @@ Aplicar:
 
 ---
 
+**Estado:** Fases 1–5 en implementación; la Fase 5 agrega cobertura de contrato HTTP y validación limpia de migraciones en CI. La Fase 4 queda cerrada cuando el pipeline asociado a estos cambios termine en `success`.
+
 ## Alcance transversal
 
 El MVP inicial es exclusivamente Tonalmaster. Ule (artículos, bibliografía, catálogos y anuncios) queda fuera de las Fases 1–5 y se planifica como evolución posterior del mismo backend.
