@@ -15,6 +15,18 @@ Auth por sesión ya cableada (ver `docs/auth-sesiones.md`); forma parte del inic
 3. Comprueba:
    - `GET http://localhost:8080/health`
    - `GET http://localhost:8080/ready`
+   - `GET http://localhost:8080/api/v1/calendars`
+
+`/health`, `/ready` y los endpoints de `calendars` no dependen del esquema de base de datos y responderán aunque no hayas aplicado migraciones. **Los endpoints de `auth`, `events` e `interpretations` sí las requieren.**
+
+4. Aplica las migraciones contra el Postgres levantado por `docker-compose.yml` (puerto expuesto por defecto: `5432`, credenciales en `.env`):
+
+   ```bash
+   psql -h localhost -U ule_user -d ule_tonalmaster -f migrations/000001_init_schema.up.sql
+   psql -h localhost -U ule_user -d ule_tonalmaster -f migrations/000002_sessions.up.sql
+   ```
+
+   Este es el mismo procedimiento que ejecuta CI (`.github/workflows/backend.yml`). Aún no hay ejecución automática de migraciones al arrancar el servicio (ver `docs/planeacion.md`, Fase 6).
 
 ## Base de datos
 

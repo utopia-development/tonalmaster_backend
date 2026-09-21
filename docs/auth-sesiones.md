@@ -44,7 +44,7 @@ El token en claro **nunca** se guarda; solo el hash.
 
 - `internal/repository` — contrato + Postgres
 - `internal/services` — bcrypt + emisión/revocación de sesión
-- `internal/handlers` — HTTP + cookie
+- `internal/handlers` — HTTP + cookie + middleware `RequireAuth` (reutilizado en `events` e `interpretations`, ver `auth_middleware.go`)
 
 ## CORS
 
@@ -58,7 +58,6 @@ Las consultas públicas de interpretaciones requieren `system` y `date` y no req
 
 ## Deuda conocida
 
-- Sin middleware genérico de autenticación (solo `/me` consume sesión).
 - Sin rate-limit en login/register.
 - CI aplica migraciones 000001 y 000002; el proceso **aún no** ejecuta migraciones al arrancar (hay que aplicarlas a mano o vía pipeline/ops).
 - Tests de auth a nivel servicio con mock; falta integración HTTP+Postgres en CI.

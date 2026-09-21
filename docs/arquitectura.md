@@ -17,57 +17,24 @@ D (Dependency Inversion Principle - Principio de Inversión de Dependencias): Lo
 2. Experiencia "Like Vikunja": Despliegue con un Solo Comando
 El proyecto se despliega de forma autónoma mediante Docker Compose. No requiere configuraciones complejas en el sistema operativo anfitrión.
 
-Archivo docker-compose.yml
-YAML
-version: '3.8'
+El archivo `docker-compose.yml` en la raíz del repositorio define los servicios `db` (PostgreSQL) y `api`. Las variables de entorno reales que consume (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`, `APP_ENV`, `APP_HOST`, `APP_PORT`, `DATABASE_URL`, `CORS_ALLOWED_ORIGINS`) están documentadas en `.env.example`; consulta ese archivo y `docker-compose.yml` como fuente de verdad en lugar de nombres de variables antiguos (`DB_USER`, `DB_HOST`, `PORT`, etc.) que pudieran aparecer en versiones previas de este documento.
 
-services:
-  db:
-    image: postgres:16-alpine
-    container_name: ule_tonalmaster_db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${DB_USER:-ule_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-secure_password}
-      POSTGRES_DB: ${DB_NAME:-ule_tonalmaster}
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ule_user} -d ${DB_NAME:-ule_tonalmaster}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  api:
-    build: .
-    container_name: ule_tonalmaster_api
-    restart: unless-stopped
-    ports:
-      - "${PORT:-8080}:8080"
-    environment:
-      - PORT=8080
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_USER=${DB_USER:-ule_user}
-      - DB_PASSWORD=${DB_PASSWORD:-secure_password}
-      - DB_NAME=${DB_NAME:-ule_tonalmaster}
-      - DB_SSLMODE=disable
-    depends_on:
-      db:
-        condition: service_healthy
-
-volumes:
-  pgdata:
 Para ponerlo en marcha:
-Copiar el archivo de entorno .env.example a .env.
+1. Copiar el archivo de entorno `.env.example` a `.env`.
+2. Ejecutar en la terminal:
 
-Ejecutar en la terminal:
-
-Bash
+```bash
 docker compose up --build -d
-La base de datos y la API estarán listas y comunicadas de manera interna y segura.
+```
+
+3. Aplicar las migraciones (aún no se ejecutan automáticamente al arrancar, ver `docs/planeacion.md` § Fase 6):
+
+```bash
+psql -h localhost -U ule_user -d ule_tonalmaster -f migrations/000001_init_schema.up.sql
+psql -h localhost -U ule_user -d ule_tonalmaster -f migrations/000002_sessions.up.sql
+```
+
+La base de datos y la API estarán listas y comunicadas de manera interna y segura; los endpoints de auth/events/interpretations solo responderán correctamente después del paso 3.
 
 3. Esquema de Base de Datos (PostgreSQL)
 
