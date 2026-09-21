@@ -13,6 +13,8 @@ import (
 	"github.com/utopia-development/tonalmaster_backend/internal/database"
 	"github.com/utopia-development/tonalmaster_backend/internal/domain/calendars"
 	"github.com/utopia-development/tonalmaster_backend/internal/handlers"
+	"github.com/utopia-development/tonalmaster_backend/internal/repository"
+	"github.com/utopia-development/tonalmaster_backend/internal/services"
 )
 
 func main() {
@@ -32,6 +34,9 @@ func main() {
 	registry := calendars.NewRegistry(calendars.NewTonalpohualliCASO())
 	health := handlers.NewHealthHandler(db)
 	calendarHandler := handlers.NewCalendarHandler(registry)
+	authRepository := repository.NewPostgresAuthRepository(db)
+	authService := services.NewAuthService(authRepository)
+	authHandler := handlers.NewAuthHandler(authService, cfg.Env != "development")
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", health.Health)
@@ -39,6 +44,10 @@ func main() {
 	mux.HandleFunc("GET /api/v1/calendars", calendarHandler.List)
 	mux.HandleFunc("GET /api/v1/calendars/{id}", calendarHandler.Get)
 	mux.HandleFunc("GET /api/v1/calendars/convert", calendarHandler.Convert)
+	mux.HandleFunc("POST /api/v1/auth/register", authHandler.Register)
+	mux.HandleFunc("POST /api/v1/auth/login", authHandler.Login)
+	mux.HandleFunc("GET /api/v1/auth/me", authHandler.Me)
+	mux.HandleFunc("POST /api/v1/auth/logout", authHandler.Logout)
 
 	server := &http.Server{Addr: cfg.Address(), Handler: corsMiddleware(cfg.CORSAllowedOrigins, mux), ReadHeaderTimeout: 5 * time.Second, IdleTimeout: 60 * time.Second}
 
