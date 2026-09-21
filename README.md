@@ -32,6 +32,8 @@ Consulta `docs/planeacion.md` para el alcance.
 
 ### API v1
 
+Los endpoints de escritura de eventos e interpretaciones requieren autenticación. Las sesiones y sus límites están documentados en `docs/auth-sesiones.md`.
+
 - `GET /api/v1/calendars`
 - `GET /api/v1/calendars/{id}`
 - `GET /api/v1/calendars/convert?date=YYYY-MM-DD&system=tonalpohualli_caso`
