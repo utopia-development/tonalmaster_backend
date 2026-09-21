@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/utopia-development/tonalmaster_backend/internal/domain/calendars"
@@ -25,7 +26,7 @@ func TestCalendarAPIContractErrors(t *testing.T) {
 			if rec.Code == http.StatusOK { t.Fatalf("expected error, got 200") }
 			if got := rec.Header().Get("Content-Type"); got != "application/json" { t.Fatalf("content type = %q", got) }
 			body := rec.Body.String()
-			if !containsAll(body, tt.wantCode, tt.wantMessage) { t.Fatalf("body = %q", body) }
+			if !strings.Contains(body, tt.wantCode) || !strings.Contains(body, tt.wantMessage) { t.Fatalf("body = %q", body) }
 		})
 	}
 }
@@ -36,22 +37,4 @@ func TestCalendarGetPathValue(t *testing.T) {
 	rec := httptest.NewRecorder()
 	NewCalendarHandler(calendars.NewRegistry(calendars.NewTonalpohualliCASO())).Get(rec, req)
 	if rec.Code != http.StatusOK { t.Fatalf("status = %d, want 200", rec.Code) }
-}
-
-func containsAll(value string, parts ...string) bool {
-	for _, part := range parts {
-		if !contains(value, part) { return false }
-	}
-	return true
-}
-
-func contains(value, part string) bool {
-	return len(part) == 0 || indexOf(value, part) >= 0
-}
-
-func indexOf(value, part string) int {
-	for i := 0; i+len(part) <= len(value); i++ {
-		if value[i:i+len(part)] == part { return i }
-	}
-	return -1
 }
