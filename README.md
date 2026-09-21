@@ -27,3 +27,11 @@ La Fase 2 incorpora la migración inicial en `migrations/000001_init_schema.up.s
 - Fase 6: integración y evolución.
 
 Consulta `docs/planeacion.md` para el alcance.
+
+### API v1
+
+- `GET /api/v1/calendars`
+- `GET /api/v1/calendars/{id}`
+- `GET /api/v1/calendars/convert?date=YYYY-MM-DD&system=tonalpohualli_caso`
+
+Los errores usan el formato JSON `{"error":{"code":"...","message":"..."}}`.
