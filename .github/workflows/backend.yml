@@ -9,6 +9,20 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: tonalmaster_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d tonalmaster_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -17,3 +31,11 @@ jobs:
       - run: go mod tidy
       - run: go test ./...
       - run: go build ./...
+      - name: Apply initial migration
+        env:
+          PGPASSWORD: test
+        run: psql -h 127.0.0.1 -U test -d tonalmaster_test -f migrations/000001_init_schema.up.sql
+      - name: Roll back initial migration
+        env:
+          PGPASSWORD: test
+        run: psql -h 127.0.0.1 -U test -d tonalmaster_test -f migrations/000001_init_schema.down.sql
