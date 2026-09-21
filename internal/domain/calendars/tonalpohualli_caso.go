@@ -31,13 +31,14 @@ func (s TonalpohualliCASO) ID() string {
 
 func (s TonalpohualliCASO) Convert(date time.Time) (Result, error) {
 	jdn := GregorianToJDN(date)
-	offset := mod(jdn-s.BaseJDN, 260)
+	// offset in [0, 259] relative to the Caso anchor (1-Coatl / trecena 1).
+	offset := int64(mod(jdn-s.BaseJDN, 260))
 
 	return Result{
 		System:    s.ID(),
 		Date:      date,
 		JDN:       jdn,
-		Trecena:   offset/13 + 1,
+		Trecena:   int(offset)/13 + 1,
 		Sign:      tonalpohualliSigns[mod(offset+4, 20)],
 		DayNumber: mod(offset, 13) + 1,
 	}, nil
