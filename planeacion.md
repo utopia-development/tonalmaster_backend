@@ -143,7 +143,11 @@ No implementar todavía:
 
 ## Estructura objetivo
 
+<<<<<<< ours
 ```text
+=======
+```
+>>>>>>> theirs
 .
 ├── .env.example
 ├── Dockerfile
