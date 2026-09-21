@@ -204,9 +204,9 @@ JSON
   "sistema": "tonalpohualli_caso",
   "jdn": 2461179,
   "resultado": {
-    "trecena": null,
-    "signo": null,
-    "numero_dia": null,
+    "trecena": 1,
+    "signo": "Cozcacuauhtli",
+    "numero_dia": 12,
     "senor_de_la_noche": null
   }
 }
@@ -249,3 +249,6 @@ tonalmaster_backend/
 6. Seguridad y sesiones (posterior al MVP inicial)
 
 La autenticación no bloquea las Fases 1–5 de calendarios. Antes de habilitar escritura sobre `events` e `interpretations`, se implementará un bloque de autenticación con sesiones opacas almacenadas en PostgreSQL: token persistido como hash, expiración y revocación. La sesión se transportará preferentemente mediante cookie `HttpOnly; Secure`; `SameSite=Lax` para frontends bajo el mismo sitio y `SameSite=None` + protección CSRF cuando sean cross-site. CORS usará orígenes explícitos y credenciales, nunca `*`. Las contraseñas se almacenarán con Argon2id o bcrypt. Los roles iniciales serán `reader`, `contributor` y `admin`. Redis y JWT quedan fuera del MVP salvo necesidad futura documentada.
+
+
+**Nota de verificación del caso:** el cálculo del sistema CASO usa como ancla 13 de agosto de 1521 (calendario juliano), JDN 2276828, identificado como 1-Cóatl y comienzo de la trecena 1 en la metodología consultada. La conversión de 2026-05-18 produce JDN 2461179; a partir de esa ancla, el dominio prueba 12-Cozcacuauhtli y trecena 1. El señor de la noche permanece sin valor hasta incorporar una tabla/fuente específica y verificable.
