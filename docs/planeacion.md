@@ -112,6 +112,12 @@ Aplicar:
 
 ---
 
+## Alcance transversal
+
+El MVP inicial es exclusivamente Tonalmaster. Ule (artículos, bibliografía, catálogos y anuncios) queda fuera de las Fases 1–5 y se planifica como evolución posterior del mismo backend.
+
+La autenticación se implementará después de las Fases 1–5 y antes de habilitar escritura autenticada sobre `events` e `interpretations`.
+
 ## Fase 6 — Integración y evolución
 
 **Objetivo:** preparar Tonalmaster para crecer sin rehacer el núcleo.

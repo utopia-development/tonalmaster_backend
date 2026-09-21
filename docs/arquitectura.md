@@ -8,7 +8,7 @@ S (Single Responsibility Principle - Principio de Responsabilidad Única): Cada 
 
 O (Open/Closed Principle - Principio de Abierto/Cerrado): El sistema está abierto a la extensión (por ejemplo, añadir nuevos sistemas calendáricos como una nueva variante del Tonalpohualli o nuevos tipos de contenido en Ule) sin necesidad de modificar el código existente de los controladores principales.
 
-L (Liskov Substitution Principle - Principio de Sustitución de Liskov): Los accesos a datos se definen mediante interfaces en Go (repository.Repository). Cualquier implementación (PostgreSQL, mock tests, etc.) puede sustituir a otra sin romper la capa de negocio.
+L (Liskov Substitution Principle - Principio de Sustitución de Liskov): Los accesos a datos se definen mediante interfaces pequeñas y específicas por dominio (`CalendarRepository`, `UserRepository`, etc.). Cualquier implementación (PostgreSQL, mock tests, etc.) puede sustituir a otra sin romper la capa de negocio.
 
 I (Interface Segregation Principle - Principio de Segregación de Interfaces): Se evitan interfaces monolíticas. Se prefieren contratos pequeños y específicos por dominio (ArticleService, CalendarService, AuthService).
 
@@ -70,18 +70,21 @@ docker compose up --build -d
 La base de datos y la API estarán listas y comunicadas de manera interna y segura.
 
 3. Esquema de Base de Datos (PostgreSQL)
+
+**Alcance del MVP:** el backend inicial es exclusivamente Tonalmaster. Ule (articles, bibliography, catalogs y ads) queda fuera del MVP y se incorporará en una fase posterior, sin obligar a implementar sus tablas o endpoints durante las Fases 1–5. La arquitectura conserva esos dominios como evolución prevista del mismo backend.
 Estructura relacional normalizada que unifica los dominios de educación, catálogos y sistemas calendáricos sociales.
 
 SQL
 -- Usuarios unificados (para Tonalmaster y panel administrativo de Ule)
 CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     username VARCHAR(100) UNIQUE NOT NULL,
     avatar_url VARCHAR(255),
-    role VARCHAR(50) DEFAULT 'reader', -- reader, contributor, admin
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    role VARCHAR(50) NOT NULL DEFAULT 'reader' CHECK (role IN ('reader', 'contributor', 'admin')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ULE: Artículos educativos
@@ -156,23 +159,25 @@ CREATE TABLE calendar_systems (
 
 -- TONALMASTER: Interpretaciones sociales en fechas específicas
 CREATE TABLE interpretations (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    calendar_system_id VARCHAR(50) REFERENCES calendar_systems(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    calendar_system_id VARCHAR(50) NOT NULL REFERENCES calendar_systems(id) ON DELETE CASCADE,
     target_date DATE NOT NULL,
     contenido TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- TONALMASTER: Eventos de usuarios en los calendarios
 CREATE TABLE events (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    calendar_system_id VARCHAR(50) REFERENCES calendar_systems(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    calendar_system_id VARCHAR(50) NOT NULL REFERENCES calendar_systems(id) ON DELETE CASCADE,
     target_date DATE NOT NULL,
     titulo VARCHAR(255) NOT NULL,
     descripcion TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 4. Contrato de Datos (API Contracts)
 Para que el frontend estático de Ule (y la futura interfaz de Tonalmaster) consuman los datos de forma idéntica sin importar si la fuente es un archivo JSON local o esta API en Go, los endpoints devolverán estrictamente los siguientes contratos JSON.
@@ -197,17 +202,17 @@ JSON
 {
   "fecha_gregoriana": "2026-05-18",
   "sistema": "tonalpohualli_caso",
-  "jdn": 2461000,
+  "jdn": 2461179,
   "resultado": {
-    "trecena": 7,
-    "signo": "Calli",
-    "numero_dia": 3,
-    "senor_de_la_noche": "Tepeyollotl"
+    "trecena": null,
+    "signo": null,
+    "numero_dia": null,
+    "senor_de_la_noche": null
   }
 }
-5. Estructura de Directorios del Repositorio (ule-tonalmaster-api)
+5. Estructura de Directorios del Repositorio (`tonalmaster_backend`)
 Plaintext
-ule-tonalmaster-api/
+tonalmaster_backend/
 ├── .env.example
 ├── Dockerfile
 ├── docker-compose.yml
@@ -223,7 +228,7 @@ ule-tonalmaster-api/
 │   │   └── config.go
 │   ├── database/
 │   │   └── db.go
-│   ├── handlers/
+│   ├── domain/\n│   │   └── calendars/\n│   ├── services/\n│   ├── handlers/
 │   │   ├── auth.go
 │   │   ├── articles.go
 │   │   ├── bibliography.go
@@ -239,3 +244,8 @@ ule-tonalmaster-api/
 └── migrations/
     ├── 000001_init_schema.up.sql
     └── 000001_init_schema.down.sql
+
+
+6. Seguridad y sesiones (posterior al MVP inicial)
+
+La autenticación no bloquea las Fases 1–5 de calendarios. Antes de habilitar escritura sobre `events` e `interpretations`, se implementará un bloque de autenticación con sesiones opacas almacenadas en PostgreSQL: token persistido como hash, expiración y revocación. La sesión se transportará preferentemente mediante cookie `HttpOnly; Secure`; `SameSite=Lax` para frontends bajo el mismo sitio y `SameSite=None` + protección CSRF cuando sean cross-site. CORS usará orígenes explícitos y credenciales, nunca `*`. Las contraseñas se almacenarán con Argon2id o bcrypt. Los roles iniciales serán `reader`, `contributor` y `admin`. Redis y JWT quedan fuera del MVP salvo necesidad futura documentada.

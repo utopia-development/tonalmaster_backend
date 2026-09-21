@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS events;
+DROP TABLE IF EXISTS interpretations;
+DROP TABLE IF EXISTS calendar_systems;
+DROP TABLE IF EXISTS users;
+DROP EXTENSION IF EXISTS pgcrypto;
