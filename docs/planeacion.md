@@ -132,6 +132,18 @@ La autenticación se implementará después de las Fases 1–5 y antes de habili
 - Agregar caché HTTP donde aporte valor.
 - Mantener migraciones versionadas.
 
+### Fase 6 — Estado de implementación
+
+Implementado en esta fase:
+- sesiones opacas en PostgreSQL y autenticación HTTP;
+- middleware reutilizable de autenticación;
+- repositorio PostgreSQL para `events` e `interpretations`;
+- creación/listado/eliminación autenticada de eventos;
+- creación autenticada y consulta pública de interpretaciones;
+- migraciones versionadas `000001` y `000002` verificadas por CI.
+
+Pendiente antes de cerrar Fase 6: pruebas de integración HTTP + PostgreSQL para auth/content, ejecución automática de migraciones al arranque o mediante un comando operativo reproducible, rate limiting y revisión final de CORS/CSRF para despliegues cross-site.
+
 ### Fuera del MVP inicial
 
 No implementar todavía:
