@@ -60,7 +60,7 @@ INSERT INTO calendar_systems (
 ) VALUES (
     'tonalpohualli_caso',
     'Tonalpohualli',
-    'CASO',
-    NULL,
-    'Sistema calendárico inicial de Tonalmaster; la correlación y reglas de cómputo se definirán en la fase de dominio.'
+    'Alfonso Caso',
+    2276828,
+    'Correlación Alfonso Caso: ancla 13 ago 1521 (juliano) = JDN 2276828 = 1-Coatl, inicio de trecena 1. Fixture verificado: 2026-05-18 → 12-Cozcacuauhtli, trecena 1, JDN 2461179.'
 );
