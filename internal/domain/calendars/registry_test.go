@@ -5,7 +5,7 @@ import (
 )
 
 func TestRegistry(t *testing.T) {
-	registry := NewRegistry(NewTonalpohualliCASO(0))
+	registry := NewRegistry(NewTonalpohualliCASO())
 	if _, err := registry.Get(TonalpohualliCASOID); err != nil {
 		t.Fatalf("expected system: %v", err)
 	}
