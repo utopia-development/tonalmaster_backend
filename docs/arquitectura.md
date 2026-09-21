@@ -60,10 +60,6 @@ services:
 
 volumes:
   pgdata:
-<<<<<<< ours
-=======
-
->>>>>>> theirs
 Para ponerlo en marcha:
 Copiar el archivo de entorno .env.example a .env.
 
@@ -71,10 +67,6 @@ Ejecutar en la terminal:
 
 Bash
 docker compose up --build -d
-<<<<<<< ours
-=======
-
->>>>>>> theirs
 La base de datos y la API estarán listas y comunicadas de manera interna y segura.
 
 3. Esquema de Base de Datos (PostgreSQL)
@@ -182,10 +174,6 @@ CREATE TABLE events (
     descripcion TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-<<<<<<< ours
-=======
-
->>>>>>> theirs
 4. Contrato de Datos (API Contracts)
 Para que el frontend estático de Ule (y la futura interfaz de Tonalmaster) consuman los datos de forma idéntica sin importar si la fuente es un archivo JSON local o esta API en Go, los endpoints devolverán estrictamente los siguientes contratos JSON.
 
@@ -204,10 +192,6 @@ JSON
   "bibliografia_relacionada": ["biblio-001"],
   "visible": true
 }
-<<<<<<< ours
-=======
-
->>>>>>> theirs
 Contrato: Conversión Calendárica (GET /api/v1/calendars/convert?date=2026-05-18&system=tonalpohualli_caso)
 JSON
 {
@@ -221,10 +205,6 @@ JSON
     "senor_de_la_noche": "Tepeyollotl"
   }
 }
-<<<<<<< ours
-=======
-
->>>>>>> theirs
 5. Estructura de Directorios del Repositorio (ule-tonalmaster-api)
 Plaintext
 ule-tonalmaster-api/
@@ -237,6 +217,7 @@ ule-tonalmaster-api/
 ├── cmd/
 │   └── server/
 │       └── main.go
+|── docs/
 ├── internal/
 │   ├── config/
 │   │   └── config.go

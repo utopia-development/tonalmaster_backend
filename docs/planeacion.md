@@ -143,11 +143,7 @@ No implementar todavía:
 
 ## Estructura objetivo
 
-<<<<<<< ours
-```text
-=======
 ```
->>>>>>> theirs
 .
 ├── .env.example
 ├── Dockerfile
@@ -159,6 +155,7 @@ No implementar todavía:
 ├── cmd/
 │   └── server/
 │       └── main.go
+|── docs/
 ├── internal/
 │   ├── config/
 │   ├── database/
