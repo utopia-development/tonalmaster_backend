@@ -92,58 +92,9 @@ Las pruebas de integración demostraron que el backend y frontend pueden operar 
 
 ### Decisión
 
-Usar **pgAdmin 4** como herramienta de administración.
+Usar **pgAdmin 4** desktop
 
-Motivos:
-
-- es específica para PostgreSQL;
-- permite inspeccionar tablas, relaciones, índices y migraciones;
-- evita introducir lógica de administración dentro de Go;
-- puede ejecutarse como un servicio Docker independiente;
-- el acceso puede quedar limitado al entorno local.
-
-### Implementación prevista
-
-Agregar un servicio `pgadmin` al `docker-compose.yml`:
-
-```text
-db       -> PostgreSQL :5432
-pgadmin  -> interfaz web :5050
-migrate  -> migraciones
-api      -> backend :8080
-```
-
-La interfaz será accesible desde Windows mediante:
-
-```text
-http://localhost:5050
-```
-
-pgAdmin se conectará a PostgreSQL usando el nombre interno de Compose:
-
-```text
-host: db
-port: 5432
-database: <POSTGRES_DB>
-user: <POSTGRES_USER>
-password: <POSTGRES_PASSWORD>
-```
-
-No se debe exponer PostgreSQL directamente a la red local si no es necesario. La administración debe entrar por pgAdmin y la API por `:8080`.
-
-Las credenciales de pgAdmin se configurarán mediante variables de entorno y quedarán documentadas en `.env.example`. No se deben guardar contraseñas reales en Git.
-
-### Criterio de terminado
-
-- pgAdmin arranca con Compose;
-- puede conectarse a `db`;
-- permite inspeccionar las tablas de Tonalmaster y Ule;
-- no cambia el modelo ni sustituye las migraciones;
-- PostgreSQL no queda innecesariamente expuesto al LAN.
-- acceso web de pgAdmin documentado en `http://localhost:5050`;
-- pgAdmin conecta a PostgreSQL mediante el hostname interno `db`.
-
----
+garantizar la conectabilidad ya sea en entorno local o en producción de una maquina cualquiera con pgadmin a la base de datos usando contraseña
 
 # Fase 10 — API editorial autenticada
 

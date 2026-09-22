@@ -17,7 +17,7 @@ D (Dependency Inversion Principle - Principio de Inversión de Dependencias): Lo
 2. Experiencia "Like Vikunja": Despliegue con un Solo Comando
 El proyecto se despliega de forma autónoma mediante Docker Compose. No requiere configuraciones complejas en el sistema operativo anfitrión.
 
-El archivo `docker-compose.yml` en la raíz define `db` (PostgreSQL), `migrate` (migraciones versionadas) y `api`. En la Fase 9 se añadirá `pgadmin` como herramienta de administración local; no forma parte de la API ni del dominio. Las variables de entorno reales que consume (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`, `APP_ENV`, `APP_HOST`, `APP_PORT`, `DATABASE_URL`, `CORS_ALLOWED_ORIGINS`) están documentadas en `.env.example`; consulta ese archivo y `docker-compose.yml` como fuente de verdad en lugar de nombres de variables antiguos (`DB_USER`, `DB_HOST`, `PORT`, etc.) que pudieran aparecer en versiones previas de este documento.
+El archivo `docker-compose.yml` en la raíz define `db` (PostgreSQL), `migrate` (migraciones versionadas) y `api`.  Las variables de entorno reales que consume (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`, `APP_ENV`, `APP_HOST`, `APP_PORT`, `DATABASE_URL`, `CORS_ALLOWED_ORIGINS`) están documentadas en `.env.example`; consulta ese archivo y `docker-compose.yml` como fuente de verdad en lugar de nombres de variables antiguos (`DB_USER`, `DB_HOST`, `PORT`, etc.) que pudieran aparecer en versiones previas de este documento.
 
 Para ponerlo en marcha:
 1. Copiar el archivo de entorno `.env.example` a `.env`.
@@ -169,7 +169,6 @@ handlers -> services -> repositories -> PostgreSQL
                     interfaces
 
 frontend Ule -> HTTP API -> services -> repositories
-pgAdmin -> PostgreSQL (herramienta operacional, no parte del dominio)
 ```
 
 Las migraciones son la fuente reproducible del esquema. Los datos editoriales normales entrarán por la API editorial; solo los datos fijos de infraestructura/demo justifican seeds mediante migración.

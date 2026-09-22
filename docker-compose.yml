@@ -28,19 +28,6 @@ services:
         condition: service_healthy
     restart: "no"
 
-  pgadmin:
-    image: dpage/pgadmin4:9.8
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-felmiquiztli@gmail.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
-      PGADMIN_CONFIG_SERVER_MODE: "False"
-    ports:
-      - "${PGADMIN_PORT:-5050}:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    depends_on:
-      db:
-        condition: service_healthy
   api:
     build: .
     environment:
@@ -59,4 +46,3 @@ services:
 
 volumes:
   pgdata:
-  pgadmin_data:
