@@ -162,7 +162,7 @@ El registro solicitará:
 - password;
 - código de verificación.
 
-El código será **estático y temporalmente almacenado en configuración/código del backend**. No se considera un mecanismo definitivo de seguridad; su finalidad inmediata es impedir que cualquier visitante anónimo cree cuentas durante esta etapa.
+El código de verificación será **estático y temporalmente almacenado en configuración/código del backend**. Se usará **únicamente durante `register`** para impedir la creación indiscriminada de cuentas. **No se usará en `login`**: el login será normal desde el inicio mediante email/username + contraseña y la sesión existente.
 
 Más adelante el código podrá:
 
@@ -172,7 +172,7 @@ Más adelante el código podrá:
 
 La contraseña debe almacenarse únicamente como hash seguro; nunca en texto plano.
 
-### 10.2 Autenticación y autorización
+### 10.2 Login y autorización
 
 Reutilizar la sesión existente de Tonalmaster.
 
