@@ -86,15 +86,85 @@ Las pruebas de integración demostraron que el backend y frontend pueden operar 
 
 # Futuro inmediato
 
-## Fase 9 — Administración de PostgreSQL para desarrollo
+## Fase 9 — Acceso y administración externa de PostgreSQL
 
-**Objetivo:** disponer de una interfaz web local para inspeccionar y administrar PostgreSQL sin convertirla en parte de la API.
+**Objetivo:** dejar PostgreSQL disponible desde la red del equipo servidor para que pueda administrarse con **pgAdmin 4 Desktop instalado fuera del proyecto**.
 
-### Decisión
+pgAdmin no forma parte de Docker Compose, no se versiona en este repositorio y no se ejecuta como servicio del backend.
 
-Usar **pgAdmin 4** desktop
+### 9.1 Publicación de PostgreSQL
 
-garantizar la conectabilidad ya sea en entorno local o en producción de una maquina cualquiera con pgadmin a la base de datos usando contraseña
+Docker Compose debe publicar el puerto de PostgreSQL en el host:
+
+```text
+POSTGRES_PORT=5432
+0.0.0.0:5432 -> PostgreSQL:5432
+```
+
+El puerto se controla mediante `POSTGRES_PORT`. El valor por defecto es `5432`.
+
+### 9.2 Variables de entorno
+
+`.env.example` debe documentar todas las variables que consume `docker-compose.yml`, incluyendo:
+
+- `POSTGRES_USER`;
+- `POSTGRES_PASSWORD`;
+- `POSTGRES_DB`;
+- `POSTGRES_PORT`;
+- `DATABASE_URL`;
+- `APP_ENV`;
+- `APP_HOST`;
+- `APP_PORT`;
+- `CORS_ALLOWED_ORIGINS`.
+
+No deben existir variables `PGADMIN_*`, porque pgAdmin no se ejecuta dentro del proyecto.
+
+### 9.3 Conexión mediante pgAdmin 4 Desktop
+
+Desde la máquina donde corre Docker:
+
+```text
+Host: 127.0.0.1
+Port: POSTGRES_PORT
+Database: POSTGRES_DB
+Username: POSTGRES_USER
+Password: POSTGRES_PASSWORD
+```
+
+Desde otra máquina de la red:
+
+```text
+Host: IP o nombre de red del servidor Docker
+Port: POSTGRES_PORT
+Database: POSTGRES_DB
+Username: POSTGRES_USER
+Password: POSTGRES_PASSWORD
+```
+
+El hostname `db` es exclusivo de la red interna de Docker Compose y no debe utilizarse desde pgAdmin Desktop externo.
+
+### 9.4 Red y firewall
+
+La fase requiere que el host que ejecuta Docker acepte conexiones entrantes al puerto `POSTGRES_PORT` desde la red donde se encuentre la máquina que ejecuta pgAdmin.
+
+La publicación de Docker no sustituye las reglas del firewall del sistema operativo ni de la red.
+
+No forma parte de esta fase abrir PostgreSQL indiscriminadamente a Internet. Si el acceso debe realizarse fuera de una LAN/VPN controlada, la red debe proporcionar el mecanismo correspondiente.
+
+### 9.5 Criterio de terminado
+
+La Fase 9 queda terminada cuando:
+
+1. `docker compose up` levanta únicamente `db`, `migrate` y `api`.
+2. No existe servicio pgAdmin en `docker-compose.yml`.
+3. `.env.example` contiene todas las variables consumidas por Compose.
+4. PostgreSQL está publicado mediante `POSTGRES_PORT`.
+5. pgAdmin 4 Desktop instalado fuera del proyecto puede conectarse al PostgreSQL del host usando IP/nombre de red, puerto, base, usuario y contraseña.
+6. La conexión local mediante `127.0.0.1:POSTGRES_PORT` también funciona.
+7. La documentación deja claro que `db` solo es resoluble dentro de Docker y que el acceso externo usa el host de Docker.
+8. README, arquitectura y planeación describen la misma estrategia.
+
+La administración de PostgreSQL mediante pgAdmin es una **herramienta de desarrollo/operación externa**, no un panel editorial para usuarios finales.
 
 # Fase 10 — API editorial autenticada
 
