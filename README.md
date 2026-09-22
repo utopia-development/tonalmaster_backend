@@ -25,7 +25,10 @@ Compose levanta:
 
 ```text
 db -> migrate -> api
+ \-> pgadmin :5050
 ```
+
+pgAdmin es una herramienta de administración de desarrollo. No forma parte de la API ni del dominio.
 
 La base se crea y las migraciones versionadas se aplican automáticamente.
 
@@ -134,9 +137,28 @@ Para datos fijos de desarrollo/demo, una migración posterior puede contener `IN
 
 ## Administración de PostgreSQL
 
-La próxima fase incorporará **pgAdmin 4** como servicio Docker de desarrollo, accesible desde Windows mediante `http://localhost:5050`.
+**Fase 9 — pgAdmin 4:** el proyecto incluye pgAdmin como servicio Docker de desarrollo, accesible desde Windows mediante `http://localhost:5050`.
 
-pgAdmin administrará PostgreSQL mediante la red interna de Compose. PostgreSQL no se expondrá al LAN innecesariamente.
+En el primer acceso usa las credenciales definidas en `.env`:
+
+```text
+PGADMIN_DEFAULT_EMAIL
+PGADMIN_DEFAULT_PASSWORD
+```
+
+Para registrar la base en pgAdmin:
+
+```text
+Host: db
+Port: 5432
+Database: ${POSTGRES_DB}
+Username: ${POSTGRES_USER}
+Password: ${POSTGRES_PASSWORD}
+```
+
+El host `db` es correcto dentro de Docker Compose; no uses `localhost` para la conexión de pgAdmin a PostgreSQL.
+
+PostgreSQL actualmente conserva su publicación local para desarrollo. No debe exponerse al LAN como parte del despliegue normal. pgAdmin se comunica con PostgreSQL por la red interna de Compose.
 
 ## API editorial — próxima fase
 
