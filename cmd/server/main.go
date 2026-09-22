@@ -40,6 +40,9 @@ func main() {
 	contentRepository := repository.NewPostgresContentRepository(db)
 	contentService := services.NewContentService(contentRepository)
 	contentHandler := handlers.NewContentHandler(contentService)
+	uleRepository := repository.NewPostgresULERepository(db)
+	uleService := services.NewULEService(uleRepository)
+	uleHandler := handlers.NewULEHandler(uleService)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", health.Health)
@@ -56,6 +59,13 @@ func main() {
 	mux.Handle("DELETE /api/v1/events/{id}", handlers.RequireAuth(authService, http.HandlerFunc(contentHandler.DeleteEvent)))
 	mux.Handle("POST /api/v1/interpretations", handlers.RequireAuth(authService, http.HandlerFunc(contentHandler.CreateInterpretation)))
 	mux.HandleFunc("GET /api/v1/interpretations", contentHandler.ListInterpretations)
+	mux.HandleFunc("GET /api/v1/articles", uleHandler.Articles)
+	mux.HandleFunc("GET /api/v1/articles/{id}", uleHandler.Article)
+	mux.HandleFunc("GET /api/v1/bibliography", uleHandler.Bibliography)
+	mux.HandleFunc("GET /api/v1/bibliography/{id}", uleHandler.Biblio)
+	mux.HandleFunc("GET /api/v1/catalogs", uleHandler.Catalogs)
+	mux.HandleFunc("GET /api/v1/catalogs/{id}", uleHandler.Catalog)
+	mux.HandleFunc("GET /api/v1/ads", uleHandler.Ads)
 
 	server := &http.Server{Addr: cfg.Address(), Handler: corsMiddleware(cfg.CORSAllowedOrigins, mux), ReadHeaderTimeout: 5 * time.Second, IdleTimeout: 60 * time.Second}
 
