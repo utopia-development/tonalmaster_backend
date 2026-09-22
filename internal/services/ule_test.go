@@ -26,7 +26,7 @@ func (f fakeULERepository) ListAds(context.Context,time.Time) ([]repository.Ad,e
 
 func TestULEServiceContractShape(t *testing.T) {
 	article := repository.Article{ID:"articulo-001",Titulo:"Título",Fecha:time.Date(2026,9,22,0,0,0,time.UTC),Resumen:"Resumen",ContenidoHTML:"<p>ok</p>",Etiquetas:[]string{"uno"},Visible:true,BibliographyIDs:[]string{"biblio-001"}}
-	biblio := repository.Bibliography{ID:"biblio-001",Titulo:"Referencia",Autores:[]string{"Autor"},Anio:2026,Tipo:"libro",ArticleIDs:[]string{"articulo-001"}}
+	biblio := repository.Bibliography{ID:"biblio-001",Titulo:"Referencia",Autores:[]string{"Autor"},Anio:ptrInt(2026),Tipo:"libro",ArticleIDs:[]string{"articulo-001"}}
 	catalog := repository.Catalog{ID:"catalogo-001",Titulo:"Catálogo",Detalles:[]byte(`{"categorias_disponibles":{"periodo":["preclasico"]}}`),Visible:true}
 	item := repository.CatalogItem{ID:"pieza-001",CatalogID:"catalogo-001",Titulo:"Pieza",Imagen:"https://example.test/pieza.jpg",Detalles:[]byte(`{"descripcion":"Desc","categorias":{"periodo":"preclasico"},"año_descubrimiento":1980}`)}
 	ad := repository.Ad{ID:"ad-001",Tipo:"evento",Activo:true,Peso:1,Inicio:ptrTime(time.Date(2026,9,1,0,0,0,time.UTC)),Fin:ptrTime(time.Date(2026,10,1,0,0,0,time.UTC))}
@@ -39,4 +39,4 @@ func TestULEServiceContractShape(t *testing.T) {
 	ads,_:=s.Ads(context.Background()); if ads[0]["vigencia_inicio"]!="2026-09-01" || ads[0]["vigencia_fin"]!="2026-10-01" { t.Fatal("ad dates not normalized") }
 }
 
-func ptrTime(v time.Time)*time.Time{return &v}
+func ptrTime(v time.Time)*time.Time{return &v}\nfunc ptrInt(v int)*int{return &v}
