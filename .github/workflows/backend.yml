@@ -37,9 +37,11 @@ jobs:
         run: |
           psql -h 127.0.0.1 -U test -d tonalmaster_test -f migrations/000001_init_schema.up.sql
           psql -h 127.0.0.1 -U test -d tonalmaster_test -f migrations/000002_sessions.up.sql
+          psql -h 127.0.0.1 -U test -d tonalmaster_test -f migrations/000003_ule_content.up.sql
       - name: Roll back migrations
         env:
           PGPASSWORD: test
         run: |
+          psql -h 127.0.0.1 -U test -d tonalmaster_test -f migrations/000003_ule_content.down.sql
           psql -h 127.0.0.1 -U test -d tonalmaster_test -f migrations/000002_sessions.down.sql
           psql -h 127.0.0.1 -U test -d tonalmaster_test -f migrations/000001_init_schema.down.sql
