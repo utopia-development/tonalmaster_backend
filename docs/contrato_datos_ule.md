@@ -107,7 +107,38 @@ Esquema completo y reglas de contenido: `docs/politica_anuncios.md`. Resumen:
 > exponerse como `vigencia_inicio`/`vigencia_fin` (`vigencia_fin` nulo = sin fin). No basta con
 > un DTO: se necesita ampliar el esquema real (ver plan de desarrollo).
 
-## 5. Endpoints y forma de las respuestas
+## 5. Escritura editorial
+
+Las operaciones de escritura requieren sesión autenticada con rol `contributor` o `admin`. Los identificadores son parte del JSON de creación, igual que en los demás recursos; no se utilizan headers privados para identificar recursos.
+
+### Creación de anuncio
+
+`POST /ads` recibe un objeto con `id` obligatorio y el resto de los campos definidos en §4. El backend persiste exactamente ese `id` y responde con el anuncio creado.
+
+Ejemplo mínimo:
+
+```json
+{
+  "id": "anuncio-001",
+  "imagen": "https://ejemplo.org/anuncio.jpg",
+  "imagen_alt": "Taller de arqueología",
+  "contacto": "contacto@ejemplo.org",
+  "slogan": "Aprende arqueología",
+  "descripcion": "Taller introductorio",
+  "vigencia_inicio": "2026-10-01",
+  "vigencia_fin": "2026-10-31",
+  "activo": true,
+  "peso": 1,
+  "enlace": "https://ejemplo.org/taller",
+  "tipo": "taller",
+  "paginas": ["home", "articulos"],
+  "prioridad_slot": "principal"
+}
+```
+
+Las operaciones `PUT` y `DELETE` identifican el anuncio mediante `/ads/{id}`.
+
+## 6. Endpoints y forma de las respuestas
 
 Con `ULE.config.dataSource = 'api'` y `ULE.config.apiBaseUrl = 'https://<host-backend>/api/v1'`
 (el prefijo `/api/v1` va dentro de `apiBaseUrl`, igual que en el resto de la API de
@@ -155,7 +186,7 @@ Con `ULE.config.dataSource = 'api'` y `ULE.config.apiBaseUrl = 'https://<host-ba
 
 Las páginas envuelven las llamadas en `try/catch`; ninguna debe quedarse en "Cargando…".
 
-## 6. Qué permanece inmutable en la migración a API
+## 7. Qué permanece inmutable en la migración a API
 
 Sin cambios: `index.html`, `articulos.html`, `articulo.html`, `bibliografia.html`,
 `catalogos.html`, todos los Web Components (`js/components.js`), `js/ads.js`, `js/main.js`, el
