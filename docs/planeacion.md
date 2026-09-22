@@ -140,6 +140,8 @@ Las credenciales de pgAdmin se configurarán mediante variables de entorno y que
 - permite inspeccionar las tablas de Tonalmaster y Ule;
 - no cambia el modelo ni sustituye las migraciones;
 - PostgreSQL no queda innecesariamente expuesto al LAN.
+- acceso web de pgAdmin documentado en `http://localhost:5050`;
+- pgAdmin conecta a PostgreSQL mediante el hostname interno `db`.
 
 ---
 
