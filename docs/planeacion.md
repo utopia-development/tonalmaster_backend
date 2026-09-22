@@ -2,248 +2,287 @@
 
 ## Objetivo
 
-Construir el backend inicial de Tonalmaster con Go + PostgreSQL, siguiendo `arquitectura.md`, principios SOLID y una arquitectura mínima que permita crecer sin complejidad innecesaria.
+Construir una API unificada en Go + PostgreSQL para Tonalmaster y Ule, con arquitectura simple, desacoplada y reproducible mediante Docker.
 
-Regla: **primero hacer funcionar el camino completo más pequeño; después extenderlo.**
+Regla rectora: **primero hacer funcionar el camino completo más pequeño; después extenderlo.**
+
+## Estado actual
+
+- **Fases 1–6:** CERRADAS.
+- **Fase 7:** CERRADA; contenido público Ule implementado.
+- **Fase 8:** CERRADA en integración local: backend, Docker, CORS y frontend Ule servido por XAMPP/Windows ya fueron probados con éxito.
+- **Siguiente paso:** administración de base de datos y, después, API editorial autenticada.
+
+## Fase 1 — Base ejecutable — CERRADA
+
+- Go, configuración por entorno, PostgreSQL, Docker Compose, Makefile.
+- `GET /health` y `GET /ready`.
+- CORS explícito.
+- Logs estructurados.
+
+## Fase 2 — Modelo mínimo — CERRADA
+
+Migraciones base para usuarios, sistemas calendáricos, interpretaciones y eventos, con relaciones, índices y restricciones.
+
+## Fase 3 — Dominio calendárico — CERRADA
+
+Sistema `tonalpohualli_caso`, lógica separada de HTTP/SQL y tests.
+
+## Fase 4 — API v1 — CERRADA
+
+Calendarios, autenticación, eventos e interpretaciones con DTOs, validación y errores JSON consistentes.
+
+## Fase 5 — Tests y contrato — CERRADA
+
+Tests de dominio/API, CI y verificación de arranque desde entorno limpio.
+
+## Fase 6 — Integración y evolución — CERRADA
+
+- Sesiones opacas en PostgreSQL.
+- Middleware de autenticación.
+- Events e interpretations autenticados.
+- Migraciones automáticas mediante Compose.
+- CORS explícito.
+- Clientes desacoplados.
+
+## Fase 7 — Contenido público Ule — CERRADA
+
+Implementado:
+
+- migración `000003_ule_content`;
+- articles, bibliography, article_bibliography, catalogs, catalog_items y ads;
+- repositorios, servicios y handlers separados;
+- rutas públicas GET:
+  - `/api/v1/articles`
+  - `/api/v1/articles/{id}`
+  - `/api/v1/bibliography`
+  - `/api/v1/bibliography/{id}`
+  - `/api/v1/catalogs`
+  - `/api/v1/catalogs/{id}`
+  - `/api/v1/ads`;
+- relaciones artículo↔bibliografía;
+- filtrado de visibilidad/vigencia en servidor;
+- DTO compatible con `docs/contrato_datos_ule.md`.
+
+La escritura editorial queda deliberadamente fuera de esta fase.
+
+## Fase 8 — Verificación e integración — CERRADA
+
+Se verificó:
+
+- compilación y ejecución Docker;
+- migraciones `000001–000003`;
+- API Ule pública;
+- CORS con `http://localhost`;
+- frontend `ule_educativo` servido desde XAMPP/Windows;
+- `ULE.config.dataSource = 'api'`;
+- `ULE.config.apiBaseUrl = 'http://localhost:8080/api/v1'`;
+- consumo real de artículos y anuncios;
+- compatibilidad del loader con las rutas inglesas del backend.
+
+Las pruebas de integración demostraron que el backend y frontend pueden operar desacoplados sin modificar los componentes de Ule.
 
 ---
 
-## Fase 1 — Base ejecutable
+# Futuro inmediato
 
-**Objetivo:** tener el proyecto arrancando localmente.
+## Fase 9 — Administración de PostgreSQL para desarrollo
 
-- Crear `go.mod`.
-- Crear `cmd/server/main.go`.
-- Crear configuración desde variables de entorno.
-- Crear conexión a PostgreSQL.
-- Crear `Dockerfile`.
-- Crear `docker-compose.yml`.
-- Crear `.env.example`.
-- Crear `Makefile`.
-- Implementar `GET /health`.
-- Implementar `GET /ready`.
-- Agregar logs estructurados.
-- Configurar CORS explícitamente.
+**Objetivo:** disponer de una interfaz web local para inspeccionar y administrar PostgreSQL sin convertirla en parte de la API.
 
-**Resultado:** API + PostgreSQL levantan con Docker y los endpoints de salud responden.
+### Decisión
+
+Usar **pgAdmin 4** como herramienta de administración.
+
+Motivos:
+
+- es específica para PostgreSQL;
+- permite inspeccionar tablas, relaciones, índices y migraciones;
+- evita introducir lógica de administración dentro de Go;
+- puede ejecutarse como un servicio Docker independiente;
+- el acceso puede quedar limitado al entorno local.
+
+### Implementación prevista
+
+Agregar un servicio `pgadmin` al `docker-compose.yml`:
+
+```text
+db       -> PostgreSQL :5432
+pgadmin  -> interfaz web :5050
+migrate  -> migraciones
+api      -> backend :8080
+```
+
+La interfaz será accesible desde Windows mediante:
+
+```text
+http://localhost:5050
+```
+
+pgAdmin se conectará a PostgreSQL usando el nombre interno de Compose:
+
+```text
+host: db
+port: 5432
+database: <POSTGRES_DB>
+user: <POSTGRES_USER>
+password: <POSTGRES_PASSWORD>
+```
+
+No se debe exponer PostgreSQL directamente a la red local si no es necesario. La administración debe entrar por pgAdmin y la API por `:8080`.
+
+Las credenciales de pgAdmin se configurarán mediante variables de entorno y quedarán documentadas en `.env.example`. No se deben guardar contraseñas reales en Git.
+
+### Criterio de terminado
+
+- pgAdmin arranca con Compose;
+- puede conectarse a `db`;
+- permite inspeccionar las tablas de Tonalmaster y Ule;
+- no cambia el modelo ni sustituye las migraciones;
+- PostgreSQL no queda innecesariamente expuesto al LAN.
 
 ---
 
-## Fase 2 — Modelo mínimo de Tonalmaster
+# Fase 10 — API editorial autenticada
 
-**Objetivo:** persistir los datos esenciales.
+**Objetivo:** permitir que usuarios autorizados administren el contenido de Ule mediante la API, manteniendo separado el sitio público de lectura y la escritura editorial.
 
-Crear migraciones para:
+### 10.1 Registro de usuarios
 
-- `users`
-- `calendar_systems`
-- `interpretations`
-- `events`
+Agregar un flujo de registro controlado:
 
-Agregar:
+```text
+POST /api/v1/auth/register
+```
 
-- claves primarias;
-- relaciones;
-- índices necesarios;
-- timestamps;
-- restricciones básicas;
-- seed mínimo para el sistema calendárico inicial.
+El registro solicitará:
 
-**Resultado:** base de datos reproducible desde cero.
+- username;
+- email;
+- password;
+- código de verificación.
 
----
+El código será **estático y temporalmente almacenado en configuración/código del backend**. No se considera un mecanismo definitivo de seguridad; su finalidad inmediata es impedir que cualquier visitante anónimo cree cuentas durante esta etapa.
 
-## Fase 3 — Dominio calendárico
+Más adelante el código podrá:
 
-**Objetivo:** separar las reglas calendáricas de HTTP y PostgreSQL.
+- migrarse a una variable de entorno/DB;
+- sustituirse por invitaciones;
+- eliminarse cuando el registro público sea permitido.
 
-- Crear una interfaz pequeña para sistemas calendáricos.
-- Implementar el primer sistema: `tonalpohualli_caso`.
-- Mantener los cálculos como funciones puras.
-- Cubrir los cálculos principales con tests.
-- No colocar SQL ni lógica HTTP dentro del dominio.
+La contraseña debe almacenarse únicamente como hash seguro; nunca en texto plano.
 
-**Resultado:** conversión de fechas verificable y reutilizable.
+### 10.2 Autenticación y autorización
 
----
+Reutilizar la sesión existente de Tonalmaster.
 
-## Fase 4 — API v1
+Definir permisos para distinguir como mínimo:
 
-**Objetivo:** exponer el dominio mediante una API estable.
+- usuario autenticado;
+- editor/contributor;
+- administrador.
+
+La API pública Ule seguirá siendo de solo lectura y sin autenticación.
+
+La API editorial requerirá autenticación y autorización.
+
+### 10.3 Artículos
 
 Implementar:
 
-- `GET /api/v1/calendars`
-- `GET /api/v1/calendars/{id}`
-- `GET /api/v1/calendars/convert?date=YYYY-MM-DD&system=...`
+```text
+POST   /api/v1/articles
+GET    /api/v1/articles/{id}
+PUT    /api/v1/articles/{id}
+DELETE /api/v1/articles/{id}
+```
 
-Después, cuando el núcleo esté estable:
+El payload debe validarse contra el contrato Ule.
 
-- endpoints de `events`;
-- endpoints de `interpretations`.
+### 10.4 Bibliografía
 
-Aplicar:
+```text
+POST   /api/v1/bibliography
+PUT    /api/v1/bibliography/{id}
+DELETE /api/v1/bibliography/{id}
+```
 
-- DTOs;
-- validación;
-- errores JSON consistentes;
-- fechas ISO 8601;
-- IDs públicos estables;
-- paginación donde corresponda;
-- CORS;
-- request ID.
+Además, administrar la relación artículo↔bibliografía.
 
-**Resultado:** contrato HTTP estable sin exponer el esquema interno de PostgreSQL.
+### 10.5 Catálogos
+
+```text
+POST   /api/v1/catalogs
+PUT    /api/v1/catalogs/{id}
+DELETE /api/v1/catalogs/{id}
+POST   /api/v1/catalogs/{id}/items
+PUT    /api/v1/catalogs/{id}/items/{item_id}
+DELETE /api/v1/catalogs/{id}/items/{item_id}
+```
+
+Mantener la reconstrucción del contrato Ule desde el modelo interno.
+
+### 10.6 Anuncios
+
+```text
+POST   /api/v1/ads
+PUT    /api/v1/ads/{id}
+DELETE /api/v1/ads/{id}
+```
+
+Validar:
+
+- vigencia;
+- activo;
+- peso;
+- tipo;
+- páginas;
+- prioridad de slot.
+
+### 10.7 Seguridad editorial
+
+No exponer escritura mediante rutas públicas sin middleware.
+
+Todas las operaciones de escritura deben:
+
+- autenticar sesión;
+- comprobar rol/permisos;
+- validar payload;
+- utilizar consultas parametrizadas;
+- devolver errores JSON consistentes;
+- tener tests HTTP de autorización;
+- registrar quién creó/modificó contenido cuando el modelo lo permita.
+
+### 10.8 Criterio de terminado
+
+- registro controlado funcionando;
+- login/logout reutilizando sesiones existentes;
+- autorización por rol;
+- CRUD de artículos;
+- CRUD de bibliografía y relaciones;
+- CRUD de catálogos y elementos;
+- CRUD de anuncios;
+- tests de autenticación/autorización;
+- tests de contrato;
+- regresión completa de Tonalmaster y Ule público;
+- documentación de los endpoints editoriales.
 
 ---
 
-## Fase 5 — Tests y contrato
+## Fuera del alcance inmediato
 
-**Objetivo:** evitar regresiones.
+No introducir todavía:
 
-- Tests unitarios del dominio calendárico.
-- Tests de repositorios.
-- Tests HTTP de endpoints principales.
-- Validar errores y entradas inválidas.
-- Verificar que el proyecto arranca desde un entorno limpio.
-- Documentar ejemplos mínimos de API.
-
-**Resultado:** una base comprobable antes de agregar funcionalidades.
-
----
-
-**Estado:** Fases 1–5 cerradas en código (dominio + API calendarios + tests + CI de migraciones). Auth por sesión iniciada (migración `000002`, handlers `/api/v1/auth/*`); documentada en `docs/auth-sesiones.md`. Siguiente foco Fase 6: migraciones al arranque, endpoints autenticados de events/interpretations, endurecer tests de auth HTTP.
-
-## Alcance transversal
-
-El MVP inicial es exclusivamente Tonalmaster. Ule (artículos, bibliografía, catálogos y anuncios) queda fuera de las Fases 1–5 y se planifica como evolución posterior del mismo backend.
-
-La autenticación se implementará después de las Fases 1–5 y antes de habilitar escritura autenticada sobre `events` e `interpretations`.
-
-## Fase 6 — Integración y evolución
-
-**Estado: CERRADA.**
-
-Objetivo cumplido: dejar el núcleo Tonalmaster operativo y preparado para evolucionar.
-
-Implementado y documentado:
-- sesiones opacas en PostgreSQL;
-- autenticación HTTP;
-- middleware reutilizable;
-- events e interpretations autenticados;
-- migraciones versionadas;
-- migraciones automáticas mediante Docker Compose;
-- CORS explícito;
-- estructura preparada para clientes desacoplados.
-
-La validación final sobre Windows/WSL/red local queda como prueba de aceptación de integración en Fase 8, no como requisito bloqueante de esta fase.
-
-## Fase 7 — Integración de contenido público con ule_educativo
-
-**Estado: IMPLEMENTACIÓN COMPLETADA.**
-
-Objetivo: exponer contenido público de Ule mediante el contrato vinculante docs/contrato_datos.md.
-
-Implementado:
-- migración 000003_ule_content;
-- articles, bibliography, article_bibliography, catalogs, catalog_items, ads;
-- repositorio PostgreSQL;
-- servicio de transformación;
-- handlers HTTP;
-- rutas públicas GET /api/v1/articles, GET /api/v1/articles/{id}, GET /api/v1/bibliography, GET /api/v1/bibliography/{id}, GET /api/v1/catalogs, GET /api/v1/catalogs/{id}, GET /api/v1/ads;
-- relaciones artículo↔bibliografía en ambos sentidos;
-- filtrado de visibilidad en SQL;
-- contrato sincronizado con ule_educativo;
-- migración 000003 incorporada al pipeline CI;
-- arranque Docker aplica automáticamente las migraciones.
-
-La Fase 7 no incluye migración del contenido editorial real ni cambios en el frontend. Esos pasos pertenecen a la integración del producto.
-
-## Fase 8 — Verificación, compatibilidad y aceptación de integración
-
-**Objetivo:** comprobar que el backend cumple el contrato de Ule y que no rompe Tonalmaster.
-
-### Tests automatizados
-- go test ./...;
-- go build ./...;
-- tests HTTP de las rutas Ule;
-- tests de servicio para forma exacta del DTO Ule (incluyendo claves con acento);
-- 200 con datos y listas vacías;
-- 404 en recursos inexistentes;
-- exclusión de visible=false;
-- exclusión de anuncios inactivos/vencidos;
-- validación de DTOs contra docs/contrato_datos.md;
-- relaciones artículo↔bibliografía;
-- catalogs/catalog_items y reconstrucción de categorías;
-- autenticación y endpoints Tonalmaster existentes;
-- migraciones 000001–000003 up/down en CI.
-
-### Compatibilidad frontend
-- el CI verifica esquema y compilación; la prueba de navegador sigue siendo una etapa de aceptación posterior;
-- el backend debe entregar imágenes como URLs resolubles; la base pública de assets debe definirse en la configuración de despliegue, no en los componentes del frontend;
-- comparar respuestas reales con ule_educativo/docs/contrato_datos.md;
-- ejecutar validadores del frontend con dataSource=api;
-- probar 404, 5xx y caída de red;
-- comprobar que no se modifican componentes/páginas innecesariamente;
-- verificar CORS con el origen real del frontend;
-- verificar que las URLs de imágenes sean resolubles desde el navegador.
-
-### Aceptación manual
-1. levantar backend en WSL mediante Docker Compose;
-2. servirlo hacia la red local;
-3. levantar ule_educativo en Windows;
-4. apuntar ULE.config.apiBaseUrl al backend;
-5. navegar artículos, bibliografía, catálogos y anuncios;
-6. comprobar auth/events/interpretations;
-7. registrar resultados e incidencias.
-
-**Criterio de cierre:** CI verde + contrato compatible + frontend real funcionando contra el backend desplegado en la red local.
-
-### Fuera del MVP inicial
-
-No implementar todavía:
-
-- panel administrativo;
-- red social completa;
-- marketplace;
-- CMS genérico;
-- sistema complejo de permisos;
 - microservicios;
-- colas;
 - Redis;
 - Kubernetes;
+- CMS genérico;
+- marketplace;
+- red social completa;
+- sistema complejo de permisos;
 - almacenamiento avanzado de imágenes.
 
----
-
-## Estructura objetivo
-
-```
-.
-├── .env.example
-├── Dockerfile
-├── docker-compose.yml
-├── Makefile
-├── go.mod
-├── go.sum
-├── README.md
-├── cmd/
-│   └── server/
-│       └── main.go
-|── docs/
-├── internal/
-│   ├── config/
-│   ├── database/
-│   ├── domain/
-│   │   └── calendars/
-│   ├── services/
-│   ├── repository/
-│   ├── handlers/
-│   └── models/
-└── migrations/
-```
-
----
+La administración de PostgreSQL mediante pgAdmin es una **herramienta de desarrollo/operación**, no un panel editorial para usuarios finales.
 
 ## Definición de terminado
 
@@ -251,21 +290,8 @@ Una fase se considera terminada cuando:
 
 - compila;
 - puede ejecutarse localmente;
-- tiene los tests correspondientes;
-- no rompe las fases anteriores;
+- tiene tests correspondientes;
+- no rompe fases anteriores;
 - mantiene separadas las responsabilidades;
-- no agrega abstracciones sin necesidad;
+- evita abstracciones innecesarias;
 - queda documentada la decisión importante.
-
----
-
-## Principios de implementación
-
-1. **SOLID**, sin sobreingeniería.
-2. **Una responsabilidad por componente.**
-3. **Dominio independiente de HTTP y SQL.**
-4. **Inyección de dependencias mediante constructores.**
-5. **Interfaces pequeñas y sólo cuando aporten desacoplamiento real.**
-6. **API estable; la base de datos no se expone al frontend.**
-7. **Migraciones reproducibles.**
-8. **Código simple antes que arquitectura compleja.**
