@@ -170,7 +170,7 @@ La administración de PostgreSQL mediante pgAdmin es una **herramienta de desarr
 
 **Objetivo:** permitir que usuarios autorizados administren el contenido de Ule mediante la API, manteniendo separado el sitio público de lectura y la escritura editorial.
 
-### 10.1 Registro de usuarios
+### 10.1 Registro de usuarios — IMPLEMENTADO
 
 Agregar un flujo de registro controlado:
 
@@ -178,12 +178,14 @@ Agregar un flujo de registro controlado:
 POST /api/v1/auth/register
 ```
 
-El registro solicitará:
+El registro solicita:
 
 - username;
 - email;
 - password;
-- código de verificación.
+- `registration_code`.
+
+El backend compara ese código contra `REGISTRATION_CODE`. Si no coincide, no crea la cuenta.
 
 El código de verificación será **estático y temporalmente almacenado en configuración/código del backend**. Se usará **únicamente durante `register`** para impedir la creación indiscriminada de cuentas. **No se usará en `login`**: el login será normal desde el inicio mediante email/username + contraseña y la sesión existente.
 
@@ -195,9 +197,11 @@ Más adelante el código podrá:
 
 La contraseña debe almacenarse únicamente como hash seguro; nunca en texto plano.
 
-### 10.2 Login y autorización
+### 10.2 Login y autorización — IMPLEMENTADO
 
 Reutilizar la sesión existente de Tonalmaster.
+
+La sesión existente mediante cookie `tonalmaster_session` o Bearer se mantiene. `RequireAuth` carga el usuario y su rol; las operaciones editoriales quedarán restringidas a `contributor` y `admin`.
 
 Definir permisos para distinguir como mínimo:
 
