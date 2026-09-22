@@ -17,7 +17,7 @@ D (Dependency Inversion Principle - Principio de Inversión de Dependencias): Lo
 2. Experiencia "Like Vikunja": Despliegue con un Solo Comando
 El proyecto se despliega de forma autónoma mediante Docker Compose. No requiere configuraciones complejas en el sistema operativo anfitrión.
 
-El archivo `docker-compose.yml` en la raíz del repositorio define los servicios `db` (PostgreSQL) y `api`. Las variables de entorno reales que consume (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`, `APP_ENV`, `APP_HOST`, `APP_PORT`, `DATABASE_URL`, `CORS_ALLOWED_ORIGINS`) están documentadas en `.env.example`; consulta ese archivo y `docker-compose.yml` como fuente de verdad en lugar de nombres de variables antiguos (`DB_USER`, `DB_HOST`, `PORT`, etc.) que pudieran aparecer en versiones previas de este documento.
+El archivo `docker-compose.yml` en la raíz del repositorio define los servicios `db` (PostgreSQL), `migrate` (migraciones versionadas) y `api`. Las variables de entorno reales que consume (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`, `APP_ENV`, `APP_HOST`, `APP_PORT`, `DATABASE_URL`, `CORS_ALLOWED_ORIGINS`) están documentadas en `.env.example`; consulta ese archivo y `docker-compose.yml` como fuente de verdad en lugar de nombres de variables antiguos (`DB_USER`, `DB_HOST`, `PORT`, etc.) que pudieran aparecer en versiones previas de este documento.
 
 Para ponerlo en marcha:
 1. Copiar el archivo de entorno `.env.example` a `.env`.
@@ -27,14 +27,9 @@ Para ponerlo en marcha:
 docker compose up --build -d
 ```
 
-3. Aplicar las migraciones (aún no se ejecutan automáticamente al arrancar, ver `docs/planeacion.md` § Fase 6):
+3. El servicio `migrate` aplica automáticamente todas las migraciones pendientes antes de iniciar la API.
 
-```bash
-psql -h localhost -U ule_user -d ule_tonalmaster -f migrations/000001_init_schema.up.sql
-psql -h localhost -U ule_user -d ule_tonalmaster -f migrations/000002_sessions.up.sql
-```
-
-La base de datos y la API estarán listas y comunicadas de manera interna y segura; los endpoints de auth/events/interpretations solo responderán correctamente después del paso 3.
+La base de datos y la API estarán listas y comunicadas de manera interna y segura.
 
 3. Esquema de Base de Datos (PostgreSQL)
 
