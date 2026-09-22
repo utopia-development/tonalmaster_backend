@@ -17,7 +17,7 @@ D (Dependency Inversion Principle - Principio de Inversión de Dependencias): Lo
 2. Experiencia "Like Vikunja": Despliegue con un Solo Comando
 El proyecto se despliega de forma autónoma mediante Docker Compose. No requiere configuraciones complejas en el sistema operativo anfitrión.
 
-El archivo `docker-compose.yml` en la raíz del repositorio define los servicios `db` (PostgreSQL), `migrate` (migraciones versionadas) y `api`. Las variables de entorno reales que consume (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`, `APP_ENV`, `APP_HOST`, `APP_PORT`, `DATABASE_URL`, `CORS_ALLOWED_ORIGINS`) están documentadas en `.env.example`; consulta ese archivo y `docker-compose.yml` como fuente de verdad en lugar de nombres de variables antiguos (`DB_USER`, `DB_HOST`, `PORT`, etc.) que pudieran aparecer en versiones previas de este documento.
+El archivo `docker-compose.yml` en la raíz define `db` (PostgreSQL), `migrate` (migraciones versionadas) y `api`. En la Fase 9 se añadirá `pgadmin` como herramienta de administración local; no forma parte de la API ni del dominio. Las variables de entorno reales que consume (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`, `APP_ENV`, `APP_HOST`, `APP_PORT`, `DATABASE_URL`, `CORS_ALLOWED_ORIGINS`) están documentadas en `.env.example`; consulta ese archivo y `docker-compose.yml` como fuente de verdad en lugar de nombres de variables antiguos (`DB_USER`, `DB_HOST`, `PORT`, etc.) que pudieran aparecer en versiones previas de este documento.
 
 Para ponerlo en marcha:
 1. Copiar el archivo de entorno `.env.example` a `.env`.
@@ -33,7 +33,7 @@ La base de datos y la API estarán listas y comunicadas de manera interna y segu
 
 3. Esquema de Base de Datos (PostgreSQL)
 
-**Alcance del MVP:** el backend inicial es exclusivamente Tonalmaster. Ule (articles, bibliography, catalogs y ads) queda fuera del MVP y se incorporará en una fase posterior, sin obligar a implementar sus tablas o endpoints durante las Fases 1–5. La arquitectura conserva esos dominios como evolución prevista del mismo backend.
+**Estado:** Tonalmaster y el contenido público Ule ya están implementados en el backend. La escritura editorial Ule queda para la Fase 10 y requerirá autenticación/autorización.
 Estructura relacional normalizada que unifica los dominios de educación, catálogos y sistemas calendáricos sociales.
 
 SQL
