@@ -17,7 +17,7 @@ D (Dependency Inversion Principle - Principio de Inversión de Dependencias): Lo
 2. Experiencia "Like Vikunja": Despliegue con un Solo Comando
 El proyecto se despliega de forma autónoma mediante Docker Compose. No requiere configuraciones complejas en el sistema operativo anfitrión.
 
-El archivo `docker-compose.yml` en la raíz define `db` (PostgreSQL), `migrate` (migraciones versionadas) y `api`.  Las variables de entorno reales que consume (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`, `APP_ENV`, `APP_HOST`, `APP_PORT`, `DATABASE_URL`, `CORS_ALLOWED_ORIGINS`) están documentadas en `.env.example`; consulta ese archivo y `docker-compose.yml` como fuente de verdad en lugar de nombres de variables antiguos (`DB_USER`, `DB_HOST`, `PORT`, etc.) que pudieran aparecer en versiones previas de este documento.
+El archivo `docker-compose.yml` en la raíz define únicamente `db` (PostgreSQL), `migrate` (migraciones versionadas) y `api`. Las variables de entorno que consume (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`, `APP_ENV`, `APP_HOST`, `APP_PORT`, `DATABASE_URL`, `CORS_ALLOWED_ORIGINS`) están documentadas en `.env.example`; ese archivo y `docker-compose.yml` son la fuente de verdad.
 
 Para ponerlo en marcha:
 1. Copiar el archivo de entorno `.env.example` a `.env`.
@@ -29,7 +29,21 @@ docker compose up --build -d
 
 3. El servicio `migrate` aplica automáticamente todas las migraciones pendientes antes de iniciar la API.
 
-La base de datos y la API estarán listas y comunicadas de manera interna y segura.
+La base de datos y la API estarán listas y comunicadas de manera interna mediante la red de Compose.
+
+### Acceso externo a PostgreSQL
+
+PostgreSQL se publica en el host mediante `POSTGRES_PORT` (por defecto `5432`) con el mapeo:
+
+```text
+0.0.0.0:${POSTGRES_PORT:-5432} -> PostgreSQL:5432
+```
+
+Esto permite que **pgAdmin 4 Desktop, instalado fuera del proyecto**, se conecte al PostgreSQL del host desde otra máquina usando la IP o nombre de red del servidor, el puerto publicado, la base, el usuario y la contraseña.
+
+El hostname `db` es únicamente un nombre DNS interno de Docker Compose. No debe utilizarse desde una máquina externa.
+
+La publicación del puerto debe complementarse con las reglas de firewall/red del host. La arquitectura del proyecto no incluye un servicio pgAdmin ni una interfaz web de administración de PostgreSQL.
 
 3. Esquema de Base de Datos (PostgreSQL)
 
@@ -169,6 +183,12 @@ handlers -> services -> repositories -> PostgreSQL
                     interfaces
 
 frontend Ule -> HTTP API -> services -> repositories
+
+pgAdmin 4 Desktop (externo)
+              |
+              | TCP POSTGRES_PORT
+              v
+        PostgreSQL del host
 ```
 
 Las migraciones son la fuente reproducible del esquema. Los datos editoriales normales entrarán por la API editorial; solo los datos fijos de infraestructura/demo justifican seeds mediante migración.
@@ -176,6 +196,8 @@ Las migraciones son la fuente reproducible del esquema. Los datos editoriales no
 9. Decisiones fuera del alcance inmediato
 
 No introducir todavía microservicios, Redis, Kubernetes, CMS genérico ni un sistema complejo de permisos. Mantener una API modular y pequeña hasta que una necesidad real justifique otra abstracción.
+
+La administración mediante pgAdmin 4 es externa al proyecto: no es un servicio Docker, no forma parte de la API y no es un panel editorial para usuarios finales.
 
 10. Verificación del dominio CASO
 
