@@ -12,6 +12,7 @@ type EditorialService struct { repo repository.EditorialRepository }
 func NewEditorialService(r repository.EditorialRepository)*EditorialService{return &EditorialService{repo:r}}
 
 func(s *EditorialService) authorize(role string)error{if role!="contributor"&&role!="admin"{return ErrForbidden};return nil}
+func(s *EditorialService) IsAuthorized(role string) bool{return s.authorize(role)==nil}
 func(s *EditorialService) CreateArticle(c context.Context,role string,x repository.Article)(repository.Article,error){if e:=s.authorize(role);e!=nil{return repository.Article{},e};return s.repo.CreateArticle(c,x)}
 func(s *EditorialService) UpdateArticle(c context.Context,role,id string,x repository.Article)(repository.Article,error){if e:=s.authorize(role);e!=nil{return repository.Article{},e};return s.repo.UpdateArticle(c,id,x)}
 func(s *EditorialService) DeleteArticle(c context.Context,role,id string)error{if e:=s.authorize(role);e!=nil{return e};return s.repo.DeleteArticle(c,id)}
