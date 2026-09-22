@@ -11,16 +11,18 @@ import (
 type AuthHandler struct {
 	auth *services.AuthService
 	secureCookie bool
+	registrationCode string
 }
 
-func NewAuthHandler(auth *services.AuthService, secureCookie bool) *AuthHandler {
-	return &AuthHandler{auth: auth, secureCookie: secureCookie}
+func NewAuthHandler(auth *services.AuthService, secureCookie bool, registrationCode string) *AuthHandler {
+	return &AuthHandler{auth: auth, secureCookie: secureCookie, registrationCode: registrationCode}
 }
 
 type authRequest struct {
 	Email string `json:"email"`
 	Username string `json:"username,omitempty"`
 	Password string `json:"password"`
+	RegistrationCode string `json:"registration_code,omitempty"`
 }
 
 type userDTO struct {
@@ -33,7 +35,7 @@ type userDTO struct {
 func (h *AuthHandler) Register(w http.ResponseWriter,r *http.Request){
 	var req authRequest
 	if err:=json.NewDecoder(r.Body).Decode(&req);err!=nil||req.Username==""{writeError(w,400,"invalid_request","email, username and password are required");return}
-	u,t,err:=h.auth.Register(r.Context(),req.Email,req.Username,req.Password);if err!=nil{writeError(w,400,"registration_failed","could not create account");return}
+	u,t,err:=h.auth.Register(r.Context(),req.Email,req.Username,req.Password,req.RegistrationCode,h.registrationCode);if err!=nil{writeError(w,400,"registration_failed","could not create account");return}
 	h.setSessionCookie(w,t);writeJSON(w,201,userDTO{ID:u.ID.String(),Email:u.Email,Username:u.Username,Role:u.Role})
 }
 func (h *AuthHandler) Login(w http.ResponseWriter,r *http.Request){
