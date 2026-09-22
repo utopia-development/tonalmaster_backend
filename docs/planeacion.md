@@ -122,126 +122,79 @@ La autenticación se implementará después de las Fases 1–5 y antes de habili
 
 ## Fase 6 — Integración y evolución
 
-**Objetivo:** preparar Tonalmaster para crecer sin rehacer el núcleo.
+**Estado: CERRADA.**
 
-- Integrar progresivamente el frontend.
-- Mantener contratos de API estables.
-- Agregar autenticación cuando sea necesaria.
-- Incorporar publicaciones/interpretaciones y eventos según prioridad real.
-- Revisar rendimiento y consultas N+1.
-- Agregar caché HTTP donde aporte valor.
-- Mantener migraciones versionadas.
+Objetivo cumplido: dejar el núcleo Tonalmaster operativo y preparado para evolucionar.
 
-### Reordenamiento para integración Ule
+Implementado y documentado:
+- sesiones opacas en PostgreSQL;
+- autenticación HTTP;
+- middleware reutilizable;
+- events e interpretations autenticados;
+- migraciones versionadas;
+- migraciones automáticas mediante Docker Compose;
+- CORS explícito;
+- estructura preparada para clientes desacoplados.
 
-La validación final de Fase 6 se mueve al final del bloque de integración: primero se deja el backend desplegable en un solo comando y se implementa el contrato público requerido por `ule_educativo`; después se realiza la prueba manual en Windows/WSL contra la red local. Así la prueba final valida el producto completo y no solo endpoints aislados.
+La validación final sobre Windows/WSL/red local queda como prueba de aceptación de integración en Fase 8, no como requisito bloqueante de esta fase.
 
-El contrato vinculante está congelado en `docs/contrato_datos.md` y debe permanecer idéntico al de `ule_educativo`.
+## Fase 7 — Integración de contenido público con ule_educativo
 
-### Fase 6 — Estado de implementación
+**Estado: IMPLEMENTACIÓN COMPLETADA.**
 
-Implementado en esta fase:
-- sesiones opacas en PostgreSQL y autenticación HTTP;
-- middleware reutilizable de autenticación;
-- repositorio PostgreSQL para `events` e `interpretations`;
-- creación/listado/eliminación autenticada de eventos;
-- creación autenticada y consulta pública de interpretaciones;
-- migraciones versionadas `000001` y `000002` verificadas por CI.
+Objetivo: exponer contenido público de Ule mediante el contrato vinculante docs/contrato_datos.md.
 
-Pendiente antes de cerrar Fase 6: pruebas de integración HTTP + PostgreSQL para auth/content, ejecución automática de migraciones al arranque o mediante un comando operativo reproducible, rate limiting y revisión final de CORS/CSRF para despliegues cross-site.
+Implementado:
+- migración 000003_ule_content;
+- articles, bibliography, article_bibliography, catalogs, catalog_items, ads;
+- repositorio PostgreSQL;
+- servicio de transformación;
+- handlers HTTP;
+- rutas públicas GET /api/v1/articles, GET /api/v1/articles/{id}, GET /api/v1/bibliography, GET /api/v1/bibliography/{id}, GET /api/v1/catalogs, GET /api/v1/catalogs/{id}, GET /api/v1/ads;
+- relaciones artículo↔bibliografía en ambos sentidos;
+- filtrado de visibilidad en SQL;
+- contrato sincronizado con ule_educativo;
+- migración 000003 incorporada al pipeline CI;
+- arranque Docker aplica automáticamente las migraciones.
 
-# Plan de desarrollo — Fase 7: endpoints de contenido para `ule_educativo`
+La Fase 7 no incluye migración del contenido editorial real ni cambios en el frontend. Esos pasos pertenecen a la integración del producto.
 
-> Objetivo único: exponer `articles`, `bibliography`, `catalogs` y `ads` como rutas **públicas**
-> de `tonalmaster_backend`, con el DTO exacto que define `docs/contrato_datos.md` (contrato
-> vinculante con `ule_educativo`). Fases 1–5 (Tonalmaster) y Fase 6 (auth/events/interpretations)
-> no se tocan. Alcance deliberadamente acotado: solo lectura pública, sin admin/CMS, sin
-> paginación, sin comentarios.
+## Fase 8 — Verificación, compatibilidad y aceptación de integración
 
-## Estado de partida
+**Objetivo:** comprobar que el backend cumple el contrato de Ule y que no rompe Tonalmaster.
 
-`docs/arquitectura.md` ya boceta el esquema SQL y un ejemplo de DTO para `articles`; sirve como
-punto de partida pero **no está implementado** (no hay migración, ni `internal/*`, ni rutas). El
-boceto tiene brechas frente al contrato del frontend — ver las notas "Nota para el backend" en
-`docs/contrato_datos.md` §1–§4. Este plan las resuelve.
+### Tests automatizados
+- go test ./...;
+- go build ./...;
+- tests HTTP de las rutas Ule;
+- 200 con datos y listas vacías;
+- 404 en recursos inexistentes;
+- exclusión de visible=false;
+- exclusión de anuncios inactivos/vencidos;
+- validación de DTOs contra docs/contrato_datos.md;
+- relaciones artículo↔bibliografía;
+- catalogs/catalog_items y reconstrucción de categorías;
+- autenticación y endpoints Tonalmaster existentes;
+- migraciones 000001–000003 up/down en CI.
 
-## Pasos
+### Compatibilidad frontend
+- comparar respuestas reales con ule_educativo/docs/contrato_datos.md;
+- ejecutar validadores del frontend con dataSource=api;
+- probar 404, 5xx y caída de red;
+- comprobar que no se modifican componentes/páginas innecesariamente;
+- verificar CORS con el origen real del frontend;
+- verificar que las URLs de imágenes sean resolubles desde el navegador.
 
-1. **Migración `000003_content.up/down.sql`** con las 5 tablas (`articles`, `bibliography`,
-   `article_bibliography`, `catalogs`, `catalog_items`, `ads`), incorporando ya los ajustes
-   detectados en el contrato:
-   - `articles.autor` → nullable (no `NOT NULL`).
-   - `bibliography`: agregar `visible BOOLEAN DEFAULT TRUE`; usar `autores TEXT[]` en vez de
-     `autor` singular; separar `editorial TEXT` y `resumen TEXT` en vez de `referencia` genérico;
-     `enlace` → `url`.
-   - `catalogs`: agregar `visible BOOLEAN DEFAULT TRUE`.
-   - `catalog_items`: mantener `detalles JSONB` (ahí viven `categorias`, `imagen_alt`,
-     `descripcion`, `año_descubrimiento`, `ubicacion`); quitar la columna `categoria` singular,
-     sobra frente al JSONB.
-   - `ads`: ampliar con `imagen_alt`, `contacto`, `slogan`, `descripcion`, `peso INTEGER`,
-     `tipo VARCHAR(50)`, `prioridad_slot VARCHAR(50)`; renombrar `fecha_inicio`/`fecha_fin` a
-     `vigencia_inicio`/`vigencia_fin` (o mantener el nombre de columna y mapear solo en el DTO,
-     lo que sea más barato dado el estado actual — no hay datos en producción que migrar).
+### Aceptación manual
+1. levantar backend en WSL mediante Docker Compose;
+2. servirlo hacia la red local;
+3. levantar ule_educativo en Windows;
+4. apuntar ULE.config.apiBaseUrl al backend;
+5. navegar artículos, bibliografía, catálogos y anuncios;
+6. comprobar auth/events/interpretations;
+7. registrar resultados e incidencias.
 
-2. **Capas Go**, replicando el patrón ya usado por `calendars`/`content` (auth):
-   - `internal/repository`: `ArticleRepository`, `BibliographyRepository`, `CatalogRepository`,
-     `AdRepository` (interfaz + implementación Postgres), siguiendo el estilo de
-     `internal/repository/postgres_auth.go`.
-   - `internal/services`: una capa fina que arma los DTOs desde las filas — aquí vive la
-     reconstrucción de `categorias_disponibles`/`categorias` desde `detalles JSONB` y el mapeo de
-     columnas de `ads` y `bibliography` descrito arriba.
-   - `internal/handlers/content_ule.go` (o dividir en `articles.go`, `bibliography.go`,
-     `catalogs.go`, `ads.go` como ya sugiere la estructura de `docs/arquitectura.md`): handlers
-     HTTP que devuelven `[]DTO` o `DTO` + 404, mismo estilo que `internal/handlers/content.go`
-     existente para `interpretations`.
-
-3. **Rutas en `cmd/server/main.go`**, montadas **sin** `RequireAuth`:
-   ```
-   GET /api/v1/articles
-   GET /api/v1/articles/{id}
-   GET /api/v1/bibliography
-   GET /api/v1/bibliography/{id}
-   GET /api/v1/catalogs
-   GET /api/v1/catalogs/{id}
-   GET /api/v1/ads
-   ```
-   Confirmar explícitamente en el router (y con un test) que ninguna de estas rutas exige cookie
-   ni Bearer token.
-
-4. **Filtro de visibilidad en la query**, no solo en el DTO: `WHERE visible = TRUE` para
-   articles/bibliography/catalogs; para `ads`, `WHERE activo = TRUE AND (vigencia_fin IS NULL OR
-   vigencia_fin >= CURRENT_DATE)`.
-
-5. **CORS**: confirmar que `CORS_ALLOWED_ORIGINS` en el entorno de despliegue incluye el dominio
-   real de `ule_educativo` (GitHub Pages u otro). Sin esto, el navegador bloquea las llamadas de
-   `loader.js` aunque el backend responda bien.
-
-6. **Tests**: unitarios de servicio (reconstrucción de DTO desde JSONB, mapeo de `ads`) +
-   handler tests por recurso (200 con datos, 200 con lista vacía, 404 en detalle, visible:false
-   excluido), siguiendo el estilo de `internal/handlers/calendars_test.go`.
-
-7. **Congelar `docs/contrato_datos.md`** (ya actualizado) como archivo idéntico en ambos repos;
-   es el criterio de aceptación de esta fase, no el código de `ule_educativo`.
-
-## Fuera de este plan (a cargo del equipo de frontend, después de que el paso 3 esté desplegado)
-
-- Cambiar en `js/loader.js` las 4 llamadas `apiJSON('/articulos'|...)` a
-  `apiJSON('/articles'|...)` y fijar `ULE.config.dataSource='api'` +
-  `ULE.config.apiBaseUrl`.
-- Correr `scripts/validar_datos.py` y `scripts/pruebas_navegador.py` con `dataSource='api'`
-  contra el backend ya desplegado.
-- Migrar el contenido editorial real (`data/articulos/*.json`, `data/bibliografia/*.json`,
-  `data/catalogos/*.json`, `data/anuncios.json`) a filas en Postgres — no es parte de este plan
-  de backend; requiere un script de carga puntual (`INSERT`) o un endpoint interno de import, a
-  decidir con el equipo editorial cuando este plan esté cerrado.
-
-## No perder de vista
-
-Esta fase agrega superficie pública nueva sin tocar los pendientes de Fase 6 ya documentados en
-`docs/planeacion.md` (migraciones automáticas al arranque, rate limiting, revisión CORS/CSRF,
-tests de integración HTTP+Postgres). Conviene resolverlos en paralelo o inmediatamente después,
-porque el sitio público (`ule_educativo`) va a exponer estas rutas a tráfico real antes que
-cualquier cliente de Tonalmaster.
+**Criterio de cierre:** CI verde + contrato compatible + frontend real funcionando contra el backend desplegado en la red local.
 
 ### Fuera del MVP inicial
 
