@@ -2,12 +2,6 @@
 
 Backend base de Tonalmaster siguiendo la arquitectura y planeación documentadas en `docs/`.
 
-## Fase actual
-
-Fases 1–5 cerradas (base, migraciones, dominio calendárico CASO, API v1, tests de contrato).
-
-Auth por sesión ya cableada (ver `docs/auth-sesiones.md`); forma parte del inicio de la Fase 6.
-
 ## Desarrollo local
 
 1. Copia `.env.example` a `.env` y ajusta valores si es necesario.
@@ -68,6 +62,79 @@ Los endpoints de escritura de eventos e interpretaciones requieren autenticació
 Los errores usan el formato JSON `{"error":{"code":"...","message":"..."}}`.
 
 Detalle de sesiones: `docs/auth-sesiones.md`.
+
+
+## Fase actual
+
+**Fase 8 — verificación, compatibilidad y aceptación de integración.**
+
+Las Fases 1–6 están cerradas y la implementación de la Fase 7 está completada. La Fase 8 verifica el contrato con `ule_educativo`, el flujo Docker/WSL/XAMPP y las regresiones del backend.
+
+## Integración Windows + WSL 2 + XAMPP
+
+La API escucha en `0.0.0.0:8080` dentro del contenedor. Prueba primero desde Windows:
+
+```text
+http://localhost:8080/health
+```
+
+En `ule_educativo`, usa `dataSource = 'api'` y:
+
+```text
+ULE.config.apiBaseUrl = 'http://localhost:8080/api/v1'
+```
+
+Si Windows no alcanza el puerto reenviado por WSL2, obtén la IP con `hostname -I` dentro de Ubuntu y usa esa dirección. En ambos casos, el origen del frontend debe estar permitido en `CORS_ALLOWED_ORIGINS`. Para XAMPP en `http://localhost`:
+
+```text
+CORS_ALLOWED_ORIGINS=http://localhost,http://127.0.0.1
+```
+
+CORS valida el **origen del navegador**, no la URL de la API. Si XAMPP usa otro puerto, incluye el origen exacto, por ejemplo `http://localhost:8081`.
+
+### Cómo impacta CI en la integración con el frontend
+
+CI no ejecuta las páginas de Ule, pero garantiza la condición previa para que puedan consumir el backend: compila Go, ejecuta los tests y levanta una PostgreSQL limpia para aplicar `000001`, `000002` y `000003`, y después revierte las migraciones en orden inverso.
+
+El flujo correcto es:
+
+```text
+cambio backend
+   -> go test / go build
+   -> CI + migraciones reproducibles
+   -> Docker Compose (db -> migrate -> api)
+   -> navegador Windows/XAMPP
+   -> ULE.loader -> GET /api/v1/... -> PostgreSQL
+```
+
+Así evitamos que el frontend tenga que compensar errores de esquema, rutas o DTO. La prueba con XAMPP cubre lo que CI no puede cubrir: CORS real, navegador, 404/5xx, caída de red y resolución de imágenes.
+
+## Datos que se cargan mediante migraciones
+
+`000003_ule_content.up.sql` crea el esquema de contenido; no conviene convertir cada publicación editorial en una migración.
+
+Para **datos fijos de desarrollo/demo**, crea una migración posterior, por ejemplo `000004_ule_seed_dev.up.sql`, con `INSERT ... ON CONFLICT ...` y un `000004_ule_seed_dev.down.sql` que elimine esos datos. Compose la ejecutará automáticamente después de `000003`.
+
+Para **contenido editorial real**, la dirección prevista es usar posteriormente endpoints de escritura autenticados. Así una migración define estructura reproducible y el contenido editorial puede cambiar sin generar una migración por cada artículo.
+
+Ejemplo conceptual:
+
+```sql
+INSERT INTO articles (id, titulo, fecha, resumen, contenido_html, visible)
+VALUES ('articulo-001', 'Título de prueba', '2026-09-22', 'Resumen', '<p>Contenido</p>', TRUE)
+ON CONFLICT (id) DO UPDATE SET
+  titulo = EXCLUDED.titulo,
+  resumen = EXCLUDED.resumen,
+  contenido_html = EXCLUDED.contenido_html,
+  visible = EXCLUDED.visible;
+```
+
+```bash
+make reset-db
+make up
+```
+
+Con eso el dato queda cargado de forma reproducible desde una base vacía.
 
 
 ## Contenido público Ule
