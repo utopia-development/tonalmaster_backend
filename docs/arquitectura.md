@@ -141,76 +141,43 @@ CREATE TABLE events (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-4. Contrato de Datos (API Contracts)
-Para que el frontend estático de Ule (y la futura interfaz de Tonalmaster) consuman los datos de forma idéntica sin importar si la fuente es un archivo JSON local o esta API en Go, los endpoints devolverán estrictamente los siguientes contratos JSON.
+4. Contrato de datos Ule
 
-Contrato: Artículo (GET /api/v1/articles/:id)
-JSON
-{
-  "id": "articulo-001",
-  "titulo": "Arquitectura de los templos del sol",
-  "autor": "Felipe González",
-  "fecha": "2026-03-15",
-  "resumen": "Análisis geométrico y astronómico...",
-  "contenido_html": "<p>Contenido detallado en HTML...</p>",
-  "imagen_destacada": "assets/images/articulos/templo.jpg",
-  "categoria": "Arquitectura",
-  "etiquetas": ["maya", "clásico", "astronomía"],
-  "bibliografia_relacionada": ["biblio-001"],
-  "visible": true
-}
-Contrato: Conversión Calendárica (GET /api/v1/calendars/convert?date=2026-05-18&system=tonalpohualli_caso)
-JSON
-{
-  "fecha_gregoriana": "2026-05-18",
-  "sistema": "tonalpohualli_caso",
-  "jdn": 2461179,
-  "resultado": {
-    "trecena": 1,
-    "signo": "Cozcacuauhtli",
-    "numero_dia": 12,
-    "senor_de_la_noche": null
-  }
-}
-5. Estructura de Directorios del Repositorio (`tonalmaster_backend`)
-Plaintext
-tonalmaster_backend/
-├── .env.example
-├── Dockerfile
-├── docker-compose.yml
-├── go.mod
-├── go.sum
-├── Makefile
-├── cmd/
-│   └── server/
-│       └── main.go
-|── docs/
-├── internal/
-│   ├── config/
-│   │   └── config.go
-│   ├── database/
-│   │   └── db.go
-│   ├── domain/\n│   │   └── calendars/\n│   ├── services/\n│   ├── handlers/
-│   │   ├── auth.go
-│   │   ├── articles.go
-│   │   ├── bibliography.go
-│   │   ├── catalogs.go
-│   │   ├── ads.go
-│   │   ├── calendars.go
-│   │   └── interpretations.go
-│   ├── models/
-│   │   └── models.go
-│   └── repository/
-│       ├── postgres.go
-│       └── repository.go
-└── migrations/
-    ├── 000001_init_schema.up.sql
-    └── 000001_init_schema.down.sql
+El contrato externo y vinculante del frontend Ule vive exclusivamente en `docs/contrato_datos_ule.md`. Este repositorio no duplica allí sus DTOs. Si cambia el contrato, se actualiza ese archivo y se verifica el adaptador del servicio Ule.
 
+La API pública Ule usa rutas en inglés y claves JSON en español según ese contrato. El contenido público es de solo lectura y no requiere autenticación.
 
-6. Seguridad y sesiones (posterior al MVP inicial)
+5. Seguridad y sesiones
 
-La autenticación no bloquea las Fases 1–5 de calendarios. Antes de habilitar escritura sobre `events` e `interpretations`, se implementará un bloque de autenticación con sesiones opacas almacenadas en PostgreSQL: token persistido como hash, expiración y revocación. La sesión se transportará preferentemente mediante cookie `HttpOnly; Secure`; `SameSite=Lax` para frontends bajo el mismo sitio y `SameSite=None` + protección CSRF cuando sean cross-site. CORS usará orígenes explícitos y credenciales, nunca `*`. Las contraseñas se almacenarán con Argon2id o bcrypt. Los roles iniciales serán `reader`, `contributor` y `admin`. Redis y JWT quedan fuera del MVP salvo necesidad futura documentada.
+La autenticación existente usa sesiones opacas almacenadas en PostgreSQL. Las contraseñas se almacenan como hash seguro y los endpoints protegidos pasan por middleware de autenticación/autorización. CORS usa orígenes explícitos y nunca `*`.
 
+El futuro registro editorial tendrá una particularidad temporal: `POST /api/v1/auth/register` requerirá un código de verificación estático. **Ese código solo controla la creación de cuentas. No participa en el login.** El login desde el inicio será el flujo normal de autenticación existente. El código podrá migrarse posteriormente a configuración/DB o retirarse cuando el registro público sea intencional.
 
-**Nota de verificación del caso:** el cálculo del sistema CASO usa como ancla 13 de agosto de 1521 (calendario juliano), JDN 2276828, identificado como 1-Cóatl y comienzo de la trecena 1 en la metodología consultada. La conversión de 2026-05-18 produce JDN 2461179; a partir de esa ancla, el dominio prueba 12-Cozcacuauhtli y trecena 1. El señor de la noche permanece sin valor hasta incorporar una tabla/fuente específica y verificable.
+6. Integración frontend
+
+Ule se sirve desacoplado del backend. En desarrollo, XAMPP puede servir el frontend y Docker/WSL la API. `ULE.config.apiBaseUrl` apunta al backend y CORS permite explícitamente el origen del frontend.
+
+7. Evolución editorial
+
+La API pública Ule permanece de lectura. La futura API editorial autenticada añadirá escritura para artículos, bibliografía, catálogos, elementos de catálogo y anuncios. Las operaciones editoriales requieren sesión y autorización por rol; no se convierten en endpoints públicos.
+
+8. Estructura conceptual
+
+```text
+handlers -> services -> repositories -> PostgreSQL
+                         ^
+                    interfaces
+
+frontend Ule -> HTTP API -> services -> repositories
+pgAdmin -> PostgreSQL (herramienta operacional, no parte del dominio)
+```
+
+Las migraciones son la fuente reproducible del esquema. Los datos editoriales normales entrarán por la API editorial; solo los datos fijos de infraestructura/demo justifican seeds mediante migración.
+
+9. Decisiones fuera del alcance inmediato
+
+No introducir todavía microservicios, Redis, Kubernetes, CMS genérico ni un sistema complejo de permisos. Mantener una API modular y pequeña hasta que una necesidad real justifique otra abstracción.
+
+10. Verificación del dominio CASO
+
+El sistema CASO usa como ancla 13 de agosto de 1521 (calendario juliano), JDN 2276828. La conversión de 2026-05-18 produce JDN 2461179 y el resultado documentado por los tests es 12-Cozcacuauhtli, trecena 1. El señor de la noche permanece sin valor hasta incorporar una tabla/fuente verificable.
