@@ -167,6 +167,7 @@ La Fase 7 no incluye migración del contenido editorial real ni cambios en el fr
 - go test ./...;
 - go build ./...;
 - tests HTTP de las rutas Ule;
+- tests de servicio para forma exacta del DTO Ule (incluyendo claves con acento);
 - 200 con datos y listas vacías;
 - 404 en recursos inexistentes;
 - exclusión de visible=false;
@@ -178,6 +179,8 @@ La Fase 7 no incluye migración del contenido editorial real ni cambios en el fr
 - migraciones 000001–000003 up/down en CI.
 
 ### Compatibilidad frontend
+- el CI verifica esquema y compilación; la prueba de navegador sigue siendo una etapa de aceptación posterior;
+- el backend debe entregar imágenes como URLs resolubles; la base pública de assets debe definirse en la configuración de despliegue, no en los componentes del frontend;
 - comparar respuestas reales con ule_educativo/docs/contrato_datos.md;
 - ejecutar validadores del frontend con dataSource=api;
 - probar 404, 5xx y caída de red;
