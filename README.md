@@ -68,3 +68,8 @@ Los endpoints de escritura de eventos e interpretaciones requieren autenticació
 Los errores usan el formato JSON `{"error":{"code":"...","message":"..."}}`.
 
 Detalle de sesiones: `docs/auth-sesiones.md`.
+
+
+## Contenido público Ule
+
+La API expone las rutas públicas `/api/v1/articles`, `/api/v1/bibliography`, `/api/v1/catalogs` y `/api/v1/ads` según `docs/contrato_datos.md`. Estas rutas no requieren sesión. La migración `000003_ule_content` se ejecuta automáticamente mediante el servicio `migrate` de Docker Compose.
