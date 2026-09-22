@@ -39,4 +39,4 @@ func TestULEServiceContractShape(t *testing.T) {
 	ads,_:=s.Ads(context.Background()); if ads[0]["vigencia_inicio"]!="2026-09-01" || ads[0]["vigencia_fin"]!="2026-10-01" { t.Fatal("ad dates not normalized") }
 }
 
-func ptrTime(v time.Time)*time.Time{return &v}\nfunc ptrInt(v int)*int{return &v}
+func ptrTime(v time.Time) *time.Time { return &v }\nfunc ptrInt(v int) *int { return &v }
