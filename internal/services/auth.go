@@ -20,8 +20,9 @@ type AuthService struct { repo repository.AuthRepository }
 
 func NewAuthService(repo repository.AuthRepository) *AuthService { return &AuthService{repo: repo} }
 
-func (s *AuthService) Register(ctx context.Context,email,username,password string)(repository.User,string,error){
+func (s *AuthService) Register(ctx context.Context,email,username,password,registrationCode,expectedCode string)(repository.User,string,error){
 	email=strings.TrimSpace(email); username=strings.TrimSpace(username)
+	if expectedCode=="" || registrationCode!=expectedCode{return repository.User{},"",ErrInvalidCredentials}
 	if email==""||username==""||len(password)<8{return repository.User{},"",ErrInvalidCredentials}
 	hash,err:=bcrypt.GenerateFromPassword([]byte(password),bcrypt.DefaultCost); if err!=nil{return repository.User{},"",err}
 	user,err:=s.repo.CreateUser(ctx,email,username,string(hash),"reader"); if err!=nil{return repository.User{},"",err}
