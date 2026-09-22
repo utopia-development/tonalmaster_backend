@@ -132,6 +132,12 @@ La autenticación se implementará después de las Fases 1–5 y antes de habili
 - Agregar caché HTTP donde aporte valor.
 - Mantener migraciones versionadas.
 
+### Reordenamiento para integración Ule
+
+La validación final de Fase 6 se mueve al final del bloque de integración: primero se deja el backend desplegable en un solo comando y se implementa el contrato público requerido por `ule_educativo`; después se realiza la prueba manual en Windows/WSL contra la red local. Así la prueba final valida el producto completo y no solo endpoints aislados.
+
+El contrato vinculante está congelado en `docs/contrato_datos.md` y debe permanecer idéntico al de `ule_educativo`.
+
 ### Fase 6 — Estado de implementación
 
 Implementado en esta fase:
