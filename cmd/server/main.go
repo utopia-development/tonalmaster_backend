@@ -36,7 +36,7 @@ func main() {
 	calendarHandler := handlers.NewCalendarHandler(registry)
 	authRepository := repository.NewPostgresAuthRepository(db)
 	authService := services.NewAuthService(authRepository)
-	authHandler := handlers.NewAuthHandler(authService, cfg.Env != "development")
+	authHandler := handlers.NewAuthHandler(authService, cfg.Env != "development", cfg.RegistrationCode)
 	contentRepository := repository.NewPostgresContentRepository(db)
 	contentService := services.NewContentService(contentRepository)
 	contentHandler := handlers.NewContentHandler(contentService)
