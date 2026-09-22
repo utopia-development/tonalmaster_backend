@@ -43,6 +43,8 @@ func main() {
 	uleRepository := repository.NewPostgresULERepository(db)
 	uleService := services.NewULEService(uleRepository)
 	uleHandler := handlers.NewULEHandler(uleService)
+	editorialService := services.NewEditorialService(uleRepository)
+	editorialHandler := handlers.NewEditorialHandler(editorialService)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", health.Health)
@@ -66,6 +68,21 @@ func main() {
 	mux.HandleFunc("GET /api/v1/catalogs", uleHandler.Catalogs)
 	mux.HandleFunc("GET /api/v1/catalogs/{id}", uleHandler.Catalog)
 	mux.HandleFunc("GET /api/v1/ads", uleHandler.Ads)
+	mux.Handle("POST /api/v1/articles", handlers.RequireAuth(authService, http.HandlerFunc(editorialHandler.CreateArticle)))
+	mux.Handle("PUT /api/v1/articles/{id}", handlers.RequireAuth(authService, http.HandlerFunc(editorialHandler.UpdateArticle)))
+	mux.Handle("DELETE /api/v1/articles/{id}", handlers.RequireAuth(authService, http.HandlerFunc(editorialHandler.DeleteArticle)))
+	mux.Handle("POST /api/v1/bibliography", handlers.RequireAuth(authService, http.HandlerFunc(editorialHandler.CreateBibliography)))
+	mux.Handle("PUT /api/v1/bibliography/{id}", handlers.RequireAuth(authService, http.HandlerFunc(editorialHandler.UpdateBibliography)))
+	mux.Handle("DELETE /api/v1/bibliography/{id}", handlers.RequireAuth(authService, http.HandlerFunc(editorialHandler.DeleteBibliography)))
+	mux.Handle("POST /api/v1/catalogs", handlers.RequireAuth(authService, http.HandlerFunc(editorialHandler.CreateCatalog)))
+	mux.Handle("PUT /api/v1/catalogs/{id}", handlers.RequireAuth(authService, http.HandlerFunc(editorialHandler.UpdateCatalog)))
+	mux.Handle("DELETE /api/v1/catalogs/{id}", handlers.RequireAuth(authService, http.HandlerFunc(editorialHandler.DeleteCatalog)))
+	mux.Handle("POST /api/v1/catalogs/{id}/items", handlers.RequireAuth(authService, http.HandlerFunc(editorialHandler.CreateItem)))
+	mux.Handle("PUT /api/v1/catalogs/{id}/items/{item_id}", handlers.RequireAuth(authService, http.HandlerFunc(editorialHandler.UpdateItem)))
+	mux.Handle("DELETE /api/v1/catalogs/{id}/items/{item_id}", handlers.RequireAuth(authService, http.HandlerFunc(editorialHandler.DeleteItem)))
+	mux.Handle("POST /api/v1/ads", handlers.RequireAuth(authService, http.HandlerFunc(editorialHandler.CreateAd)))
+	mux.Handle("PUT /api/v1/ads/{id}", handlers.RequireAuth(authService, http.HandlerFunc(editorialHandler.UpdateAd)))
+	mux.Handle("DELETE /api/v1/ads/{id}", handlers.RequireAuth(authService, http.HandlerFunc(editorialHandler.DeleteAd)))
 
 	server := &http.Server{Addr: cfg.Address(), Handler: corsMiddleware(cfg.CORSAllowedOrigins, mux), ReadHeaderTimeout: 5 * time.Second, IdleTimeout: 60 * time.Second}
 
