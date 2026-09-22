@@ -1,17 +1,126 @@
 package services
-import("context";"encoding/json";"net/url";"time";"github.com/utopia-development/tonalmaster_backend/internal/repository")
-type ULEService struct{repo repository.ULERepository}
-func NewULEService(r repository.ULERepository)*ULEService{return &ULEService{repo:r}}
-func(s *ULEService)Articles(c context.Context)([]map[string]any,error){v,e:=s.repo.ListArticles(c);if e!=nil{return nil,e};out:=make([]map[string]any,0,len(v));for _,x:=range v{out=append(out,articleDTO(x))};return out,nil}
-func(s *ULEService)Article(c context.Context,id string)(map[string]any,error){x,e:=s.repo.GetArticle(c,id);if e!=nil{return nil,e};return articleDTO(x),nil}
-func(s *ULEService)Bibliography(c context.Context)([]map[string]any,error){v,e:=s.repo.ListBibliography(c);if e!=nil{return nil,e};out:=make([]map[string]any,0,len(v));for _,x:=range v{out=append(out,biblioDTO(x))};return out,nil}
-func(s *ULEService)Biblio(c context.Context,id string)(map[string]any,error){x,e:=s.repo.GetBibliography(c,id);if e!=nil{return nil,e};return biblioDTO(x),nil}
-func(s *ULEService)Catalogs(c context.Context)([]map[string]any,error){v,e:=s.repo.ListCatalogs(c);if e!=nil{return nil,e};out:=make([]map[string]any,0,len(v));for _,x:=range v{out=append(out,catalogDTO(x,nil))};return out,nil}
-func(s *ULEService)Catalog(c context.Context,id string)(map[string]any,error){x,items,e:=s.repo.GetCatalog(c,id);if e!=nil{return nil,e};return catalogDTO(x,items),nil}
-func(s *ULEService)Ads(c context.Context)([]map[string]any,error){v,e:=s.repo.ListAds(c,time.Now().UTC());if e!=nil{return nil,e};out:=make([]map[string]any,0,len(v));for _,x:=range v{out=append(out,adDTO(x))};return out,nil}
-func text(v *string)any{if v==nil{return nil};return *v}
-func image(v *string)any{if v==nil||*v==""{return nil};if u,e:=url.Parse(*v);e==nil&&u.IsAbs(){return *v};return *v}
-func articleDTO(x repository.Article)map[string]any{return map[string]any{"id":x.ID,"titulo":x.Titulo,"autor":text(x.Autor),"fecha":x.Fecha.Format("2006-01-02"),"resumen":x.Resumen,"contenido_html":x.ContenidoHTML,"imagen_destacada":image(x.ImagenDestacada),"imagen_alt":text(x.ImagenAlt),"categoria":text(x.Categoria),"etiquetas":x.Etiquetas,"bibliografía_relacionada":x.BibliographyIDs,"visible":x.Visible}}
-func biblioDTO(x repository.Bibliography)map[string]any{return map[string]any{"id":x.ID,"titulo":x.Titulo,"autores":x.Autores,"año":x.Anio,"tipo":x.Tipo,"editorial":text(x.Editorial),"resumen":text(x.Resumen),"url":text(x.URL),"articulos_relacionados":x.ArticleIDs,"visible":x.Visible}}
-func catalogDTO(x repository.Catalog,items []repository.CatalogItem)map[string]any{var meta map[string]any;if json.Unmarshal(x.Detalles,&meta)!=nil{meta=map[string]any{}};els:=make([]map[string]any,0,len(items));for _,i:=range items{var d map[string]any;if json.Unmarshal(i.Detalles,&d)!=nil{d=map[string]any{}};e:=map[string]any{"id":i.ID,"titulo":i.Titulo,"imagen":image(&i.Imagen)};for k,v:=range d{e[k]=v.(map[string]any)};els=append(els,e)};cats:=map[string]any{};if v,ok:=meta["categorias_disponibles"];ok{cats=v};return map[string]any{"id":x.ID,"titulo":x.Titulo,"descripcion":text(x.Descripcion),"imagen_portada":image(x.ImagenPortada),"categorias_disponibles":cats,"elementos":els,"visible":x.Visible}}
-func adDTO(x repository.Ad)map[string]any{dp:=func(t *time.Time)any{if t==nil{return nil};return t.Format("2006-01-02")};return map[string]any{"id":x.ID,"imagen":image(x.Imagen),"imagen_alt":text(x.ImagenAlt),"contacto":text(x.Contacto),"slogan":text(x.Slogan),"descripcion":text(x.Descripcion),"vigencia_inicio":dp(x.Inicio),"vigencia_fin":dp(x.Fin),"activo":x.Activo,"peso":x.Peso,"enlace":text(x.Enlace),"tipo":x.Tipo,"paginas":x.Paginas,"prioridad_slot":text(x.PrioridadSlot)}}
+
+import (
+	"context"
+	"encoding/json"
+	"net/url"
+	"time"
+
+	"github.com/utopia-development/tonalmaster_backend/internal/repository"
+)
+
+type ULEService struct{ repo repository.ULERepository }
+
+func NewULEService(r repository.ULERepository) *ULEService { return &ULEService{repo: r} }
+
+func (s *ULEService) Articles(c context.Context) ([]map[string]any, error) {
+	v, e := s.repo.ListArticles(c)
+	if e != nil { return nil, e }
+	out := make([]map[string]any, 0, len(v))
+	for _, x := range v { out = append(out, articleDTO(x)) }
+	return out, nil
+}
+func (s *ULEService) Article(c context.Context, id string) (map[string]any, error) {
+	x, e := s.repo.GetArticle(c, id)
+	if e != nil { return nil, e }
+	return articleDTO(x), nil
+}
+func (s *ULEService) Bibliography(c context.Context) ([]map[string]any, error) {
+	v, e := s.repo.ListBibliography(c)
+	if e != nil { return nil, e }
+	out := make([]map[string]any, 0, len(v))
+	for _, x := range v { out = append(out, biblioDTO(x)) }
+	return out, nil
+}
+func (s *ULEService) Biblio(c context.Context, id string) (map[string]any, error) {
+	x, e := s.repo.GetBibliography(c, id)
+	if e != nil { return nil, e }
+	return biblioDTO(x), nil
+}
+func (s *ULEService) Catalogs(c context.Context) ([]map[string]any, error) {
+	v, e := s.repo.ListCatalogs(c)
+	if e != nil { return nil, e }
+	out := make([]map[string]any, 0, len(v))
+	for _, x := range v { out = append(out, catalogDTO(x, nil)) }
+	return out, nil
+}
+func (s *ULEService) Catalog(c context.Context, id string) (map[string]any, error) {
+	x, items, e := s.repo.GetCatalog(c, id)
+	if e != nil { return nil, e }
+	return catalogDTO(x, items), nil
+}
+func (s *ULEService) Ads(c context.Context) ([]map[string]any, error) {
+	v, e := s.repo.ListAds(c, time.Now().UTC())
+	if e != nil { return nil, e }
+	out := make([]map[string]any, 0, len(v))
+	for _, x := range v { out = append(out, adDTO(x)) }
+	return out, nil
+}
+
+func text(v *string) any {
+	if v == nil { return nil }
+	return *v
+}
+
+func image(v *string) any {
+	if v == nil || *v == "" { return nil }
+	if u, e := url.Parse(*v); e == nil && u.IsAbs() { return *v }
+	return *v
+}
+
+func articleDTO(x repository.Article) map[string]any {
+	return map[string]any{
+		"id": x.ID, "titulo": x.Titulo, "autor": text(x.Autor),
+		"fecha": x.Fecha.Format("2006-01-02"), "resumen": x.Resumen,
+		"contenido_html": x.ContenidoHTML, "imagen_destacada": image(x.ImagenDestacada),
+		"imagen_alt": text(x.ImagenAlt), "categoria": text(x.Categoria),
+		"etiquetas": x.Etiquetas, "bibliografía_relacionada": x.BibliographyIDs, "visible": x.Visible,
+	}
+}
+func biblioDTO(x repository.Bibliography) map[string]any {
+	return map[string]any{
+		"id": x.ID, "titulo": x.Titulo, "autores": x.Autores, "año": x.Anio,
+		"tipo": x.Tipo, "editorial": text(x.Editorial), "resumen": text(x.Resumen),
+		"url": text(x.URL), "articulos_relacionados": x.ArticleIDs, "visible": x.Visible,
+	}
+}
+
+func catalogDTO(x repository.Catalog, items []repository.CatalogItem) map[string]any {
+	var meta map[string]any
+	if json.Unmarshal(x.Detalles, &meta) != nil { meta = map[string]any{} }
+
+	els := make([]map[string]any, 0, len(items))
+	for _, i := range items {
+		var d map[string]any
+		if json.Unmarshal(i.Detalles, &d) != nil { d = map[string]any{} }
+
+		e := map[string]any{"id": i.ID, "titulo": i.Titulo, "imagen": image(&i.Imagen)}
+		for k, v := range d {
+			e[k] = v
+		}
+		els = append(els, e)
+	}
+
+	cats := map[string]any{}
+	if v, ok := meta["categorias_disponibles"]; ok { cats = v.(map[string]any) }
+
+	return map[string]any{
+		"id": x.ID, "titulo": x.Titulo, "descripcion": text(x.Descripcion),
+		"imagen_portada": image(x.ImagenPortada), "categorias_disponibles": cats,
+		"elementos": els, "visible": x.Visible,
+	}
+}
+
+func adDTO(x repository.Ad) map[string]any {
+	dp := func(t *time.Time) any {
+		if t == nil { return nil }
+		return t.Format("2006-01-02")
+	}
+	return map[string]any{
+		"id": x.ID, "imagen": image(x.Imagen), "imagen_alt": text(x.ImagenAlt),
+		"contacto": text(x.Contacto), "slogan": text(x.Slogan), "descripcion": text(x.Descripcion),
+		"vigencia_inicio": dp(x.Inicio), "vigencia_fin": dp(x.Fin), "activo": x.Activo,
+		"peso": x.Peso, "enlace": text(x.Enlace), "tipo": x.Tipo, "paginas": x.Paginas,
+		"prioridad_slot": text(x.PrioridadSlot),
+	}
+}
