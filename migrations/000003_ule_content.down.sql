@@ -1,0 +1,6 @@
+DROP TABLE IF EXISTS ads;
+DROP TABLE IF EXISTS catalog_items;
+DROP TABLE IF EXISTS catalogs;
+DROP TABLE IF EXISTS article_bibliography;
+DROP TABLE IF EXISTS bibliography;
+DROP TABLE IF EXISTS articles;
