@@ -144,6 +144,99 @@ Implementado en esta fase:
 
 Pendiente antes de cerrar Fase 6: pruebas de integración HTTP + PostgreSQL para auth/content, ejecución automática de migraciones al arranque o mediante un comando operativo reproducible, rate limiting y revisión final de CORS/CSRF para despliegues cross-site.
 
+# Plan de desarrollo — Fase 7: endpoints de contenido para `ule_educativo`
+
+> Objetivo único: exponer `articles`, `bibliography`, `catalogs` y `ads` como rutas **públicas**
+> de `tonalmaster_backend`, con el DTO exacto que define `docs/contrato_datos.md` (contrato
+> vinculante con `ule_educativo`). Fases 1–5 (Tonalmaster) y Fase 6 (auth/events/interpretations)
+> no se tocan. Alcance deliberadamente acotado: solo lectura pública, sin admin/CMS, sin
+> paginación, sin comentarios.
+
+## Estado de partida
+
+`docs/arquitectura.md` ya boceta el esquema SQL y un ejemplo de DTO para `articles`; sirve como
+punto de partida pero **no está implementado** (no hay migración, ni `internal/*`, ni rutas). El
+boceto tiene brechas frente al contrato del frontend — ver las notas "Nota para el backend" en
+`docs/contrato_datos.md` §1–§4. Este plan las resuelve.
+
+## Pasos
+
+1. **Migración `000003_content.up/down.sql`** con las 5 tablas (`articles`, `bibliography`,
+   `article_bibliography`, `catalogs`, `catalog_items`, `ads`), incorporando ya los ajustes
+   detectados en el contrato:
+   - `articles.autor` → nullable (no `NOT NULL`).
+   - `bibliography`: agregar `visible BOOLEAN DEFAULT TRUE`; usar `autores TEXT[]` en vez de
+     `autor` singular; separar `editorial TEXT` y `resumen TEXT` en vez de `referencia` genérico;
+     `enlace` → `url`.
+   - `catalogs`: agregar `visible BOOLEAN DEFAULT TRUE`.
+   - `catalog_items`: mantener `detalles JSONB` (ahí viven `categorias`, `imagen_alt`,
+     `descripcion`, `año_descubrimiento`, `ubicacion`); quitar la columna `categoria` singular,
+     sobra frente al JSONB.
+   - `ads`: ampliar con `imagen_alt`, `contacto`, `slogan`, `descripcion`, `peso INTEGER`,
+     `tipo VARCHAR(50)`, `prioridad_slot VARCHAR(50)`; renombrar `fecha_inicio`/`fecha_fin` a
+     `vigencia_inicio`/`vigencia_fin` (o mantener el nombre de columna y mapear solo en el DTO,
+     lo que sea más barato dado el estado actual — no hay datos en producción que migrar).
+
+2. **Capas Go**, replicando el patrón ya usado por `calendars`/`content` (auth):
+   - `internal/repository`: `ArticleRepository`, `BibliographyRepository`, `CatalogRepository`,
+     `AdRepository` (interfaz + implementación Postgres), siguiendo el estilo de
+     `internal/repository/postgres_auth.go`.
+   - `internal/services`: una capa fina que arma los DTOs desde las filas — aquí vive la
+     reconstrucción de `categorias_disponibles`/`categorias` desde `detalles JSONB` y el mapeo de
+     columnas de `ads` y `bibliography` descrito arriba.
+   - `internal/handlers/content_ule.go` (o dividir en `articles.go`, `bibliography.go`,
+     `catalogs.go`, `ads.go` como ya sugiere la estructura de `docs/arquitectura.md`): handlers
+     HTTP que devuelven `[]DTO` o `DTO` + 404, mismo estilo que `internal/handlers/content.go`
+     existente para `interpretations`.
+
+3. **Rutas en `cmd/server/main.go`**, montadas **sin** `RequireAuth`:
+   ```
+   GET /api/v1/articles
+   GET /api/v1/articles/{id}
+   GET /api/v1/bibliography
+   GET /api/v1/bibliography/{id}
+   GET /api/v1/catalogs
+   GET /api/v1/catalogs/{id}
+   GET /api/v1/ads
+   ```
+   Confirmar explícitamente en el router (y con un test) que ninguna de estas rutas exige cookie
+   ni Bearer token.
+
+4. **Filtro de visibilidad en la query**, no solo en el DTO: `WHERE visible = TRUE` para
+   articles/bibliography/catalogs; para `ads`, `WHERE activo = TRUE AND (vigencia_fin IS NULL OR
+   vigencia_fin >= CURRENT_DATE)`.
+
+5. **CORS**: confirmar que `CORS_ALLOWED_ORIGINS` en el entorno de despliegue incluye el dominio
+   real de `ule_educativo` (GitHub Pages u otro). Sin esto, el navegador bloquea las llamadas de
+   `loader.js` aunque el backend responda bien.
+
+6. **Tests**: unitarios de servicio (reconstrucción de DTO desde JSONB, mapeo de `ads`) +
+   handler tests por recurso (200 con datos, 200 con lista vacía, 404 en detalle, visible:false
+   excluido), siguiendo el estilo de `internal/handlers/calendars_test.go`.
+
+7. **Congelar `docs/contrato_datos.md`** (ya actualizado) como archivo idéntico en ambos repos;
+   es el criterio de aceptación de esta fase, no el código de `ule_educativo`.
+
+## Fuera de este plan (a cargo del equipo de frontend, después de que el paso 3 esté desplegado)
+
+- Cambiar en `js/loader.js` las 4 llamadas `apiJSON('/articulos'|...)` a
+  `apiJSON('/articles'|...)` y fijar `ULE.config.dataSource='api'` +
+  `ULE.config.apiBaseUrl`.
+- Correr `scripts/validar_datos.py` y `scripts/pruebas_navegador.py` con `dataSource='api'`
+  contra el backend ya desplegado.
+- Migrar el contenido editorial real (`data/articulos/*.json`, `data/bibliografia/*.json`,
+  `data/catalogos/*.json`, `data/anuncios.json`) a filas en Postgres — no es parte de este plan
+  de backend; requiere un script de carga puntual (`INSERT`) o un endpoint interno de import, a
+  decidir con el equipo editorial cuando este plan esté cerrado.
+
+## No perder de vista
+
+Esta fase agrega superficie pública nueva sin tocar los pendientes de Fase 6 ya documentados en
+`docs/planeacion.md` (migraciones automáticas al arranque, rate limiting, revisión CORS/CSRF,
+tests de integración HTTP+Postgres). Conviene resolverlos en paralelo o inmediatamente después,
+porque el sitio público (`ule_educativo`) va a exponer estas rutas a tráfico real antes que
+cualquier cliente de Tonalmaster.
+
 ### Fuera del MVP inicial
 
 No implementar todavía:
