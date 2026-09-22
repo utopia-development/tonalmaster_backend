@@ -31,7 +31,7 @@ func Load() (Config, error) {
 		Host:               getenv("APP_HOST", "0.0.0.0"),
 		Port:               port,
 		DatabaseURL:        databaseURL,
-		CORSAllowedOrigins: splitCSV(getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173")),
+		CORSAllowedOrigins: splitCSV(getenv("CORS_ALLOWED_ORIGINS", "http://localhost,http://127.0.0.1,http://localhost:3000,http://localhost:5173")),
 	}, nil
 }
 
