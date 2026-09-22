@@ -13,6 +13,7 @@ type Config struct {
 	Port                int
 	DatabaseURL         string
 	CORSAllowedOrigins  []string
+	RegistrationCode    string
 }
 
 func Load() (Config, error) {
@@ -32,6 +33,7 @@ func Load() (Config, error) {
 		Port:               port,
 		DatabaseURL:        databaseURL,
 		CORSAllowedOrigins: splitCSV(getenv("CORS_ALLOWED_ORIGINS", "http://localhost,http://127.0.0.1,http://localhost:3000,http://localhost:5173")),
+		RegistrationCode: getenv("REGISTRATION_CODE", ""),
 	}, nil
 }
 
