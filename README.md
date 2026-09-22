@@ -7,7 +7,7 @@ Backend unificado de Tonalmaster + Ule, construido con Go + PostgreSQL y despleg
 - Fases 1–6: cerradas.
 - Fase 7: contenido público Ule cerrada.
 - Fase 8: integración Windows/WSL/XAMPP cerrada.
-- Siguiente: **Fase 9 — pgAdmin para administración de PostgreSQL en desarrollo**.
+- Fase 9: acceso y administración de PostgreSQL mediante **pgAdmin 4 Desktop externo**.
 - Después: **Fase 10 — API editorial autenticada**.
 
 La planeación completa está en `docs/planeacion.md`.
@@ -21,14 +21,13 @@ cp .env.example .env
 make up
 ```
 
-Compose levanta:
+Compose levanta únicamente los servicios del backend:
 
 ```text
 db -> migrate -> api
- \-> pgadmin :5050
 ```
 
-pgAdmin es una herramienta de administración de desarrollo. No forma parte de la API ni del dominio.
+**pgAdmin no forma parte de Docker Compose ni del proyecto.** La administración de PostgreSQL se realiza con **pgAdmin 4 Desktop instalado fuera del proyecto**.
 
 La base se crea y las migraciones versionadas se aplican automáticamente.
 
@@ -135,30 +134,33 @@ Las migraciones definen estructura reproducible. La migración `000003_ule_conte
 
 Para datos fijos de desarrollo/demo, una migración posterior puede contener `INSERT ... ON CONFLICT`. El contenido editorial real no debe convertirse en una migración por publicación: la futura API editorial será la vía de escritura.
 
-## Administración de PostgreSQL
+## Acceso y administración de PostgreSQL
 
-**Fase 9 — pgAdmin 4:** el proyecto incluye pgAdmin como servicio Docker de desarrollo, accesible desde Windows mediante `http://localhost:5050`.
+PostgreSQL se publica desde Docker en el puerto del host definido por `POSTGRES_PORT` (por defecto `5432`). Desde pgAdmin 4 Desktop se conecta directamente al host donde corre Docker.
 
-En el primer acceso usa las credenciales definidas en `.env`:
-
-```text
-PGADMIN_DEFAULT_EMAIL
-PGADMIN_DEFAULT_PASSWORD
-```
-
-Para registrar la base en pgAdmin:
+En la misma máquina:
 
 ```text
-Host: db
+Host: 127.0.0.1
 Port: 5432
-Database: ${POSTGRES_DB}
-Username: ${POSTGRES_USER}
-Password: ${POSTGRES_PASSWORD}
+Database: POSTGRES_DB
+Username: POSTGRES_USER
+Password: POSTGRES_PASSWORD
 ```
 
-El host `db` es correcto dentro de Docker Compose; no uses `localhost` para la conexión de pgAdmin a PostgreSQL.
+Desde otra máquina de la red:
 
-PostgreSQL actualmente conserva su publicación local para desarrollo. No debe exponerse al LAN como parte del despliegue normal. pgAdmin se comunica con PostgreSQL por la red interna de Compose.
+```text
+Host: IP o nombre de red de la máquina donde corre Docker
+Port: 5432
+Database: POSTGRES_DB
+Username: POSTGRES_USER
+Password: POSTGRES_PASSWORD
+```
+
+El hostname `db` solo funciona dentro de la red de Docker Compose. Desde pgAdmin Desktop externo debe utilizarse la IP o nombre de red del host Docker.
+
+Para conexiones desde otra máquina también debe permitirse el puerto `POSTGRES_PORT` en el firewall/red del host. El proyecto no incluye pgAdmin ni una interfaz web de administración de PostgreSQL.
 
 ## API editorial — próxima fase
 
