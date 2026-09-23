@@ -103,7 +103,7 @@ func TestAuthRegisterLoginMeLogout(t *testing.T) {
 		t.Fatalf("me after register: user=%+v err=%v", me, err)
 	}
 
-	if _, _, err := svc.Login(ctx, "a@example.com", "wrong-password"); !errors.Is(err, ErrInvalidRegistrationData) {
+	if _, _, err := svc.Login(ctx, "a@example.com", "wrong-password"); !errors.Is(err, ErrInvalidCredentials) {
 		t.Fatalf("expected invalid credentials, got %v", err)
 	}
 
