@@ -87,7 +87,7 @@ func TestAuthRegisterLoginMeLogout(t *testing.T) {
 	svc := NewAuthService(repo)
 	ctx := context.Background()
 
-	user, token, err := svc.Register(ctx, "a@example.com", "alice", "password12")
+	user, token, err := svc.Register(ctx, "a@example.com", "alice", "password12", "test-code", "test-code")
 	if err != nil {
 		t.Fatalf("register: %v", err)
 	}
@@ -126,10 +126,10 @@ func TestAuthRegisterLoginMeLogout(t *testing.T) {
 func TestAuthRegisterValidation(t *testing.T) {
 	svc := NewAuthService(newMockAuthRepo())
 	ctx := context.Background()
-	if _, _, err := svc.Register(ctx, "", "x", "password12"); !errors.Is(err, ErrInvalidCredentials) {
+	if _, _, err := svc.Register(ctx, "", "x", "password12", "test-code", "test-code"); !errors.Is(err, ErrInvalidCredentials) {
 		t.Fatalf("empty email: %v", err)
 	}
-	if _, _, err := svc.Register(ctx, "a@b.c", "x", "short"); !errors.Is(err, ErrInvalidCredentials) {
+	if _, _, err := svc.Register(ctx, "a@b.c", "x", "short", "test-code", "test-code"); !errors.Is(err, ErrInvalidCredentials) {
 		t.Fatalf("short password: %v", err)
 	}
 }
@@ -137,7 +137,7 @@ func TestAuthRegisterValidation(t *testing.T) {
 func TestPasswordIsHashed(t *testing.T) {
 	repo := newMockAuthRepo()
 	svc := NewAuthService(repo)
-	_, _, err := svc.Register(context.Background(), "b@example.com", "bob", "password12")
+	_, _, err := svc.Register(context.Background(), "b@example.com", "bob", "password12", "test-code", "test-code")
 	if err != nil {
 		t.Fatal(err)
 	}
