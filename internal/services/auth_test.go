@@ -126,10 +126,10 @@ func TestAuthRegisterLoginMeLogout(t *testing.T) {
 func TestAuthRegisterValidation(t *testing.T) {
 	svc := NewAuthService(newMockAuthRepo())
 	ctx := context.Background()
-	if _, _, err := svc.Register(ctx, "", "x", "password12", "test-code", "test-code"); !errors.Is(err, ErrInvalidCredentials) {
+	if _, _, err := svc.Register(ctx, "", "x", "password12", "test-code", "test-code"); !errors.Is(err, ErrInvalidRegistrationData) {
 		t.Fatalf("empty email: %v", err)
 	}
-	if _, _, err := svc.Register(ctx, "a@b.c", "x", "short", "test-code", "test-code"); !errors.Is(err, ErrInvalidCredentials) {
+	if _, _, err := svc.Register(ctx, "a@b.c", "x", "short", "test-code", "test-code"); !errors.Is(err, ErrInvalidRegistrationData) {
 		t.Fatalf("short password: %v", err)
 	}
 }
