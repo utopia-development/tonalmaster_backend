@@ -8,10 +8,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var ErrNotFound = errors.New("not found")
+var ErrUserAlreadyExists = errors.New("user already exists")
 
 type PostgresAuthRepository struct { db *pgxpool.Pool }
 
@@ -22,7 +24,11 @@ func NewPostgresAuthRepository(db *pgxpool.Pool) *PostgresAuthRepository {
 func (r *PostgresAuthRepository) CreateUser(ctx context.Context, email, username, passwordHash, role string) (User, error) {
 	var u User
 	err := r.db.QueryRow(ctx, "INSERT INTO users (email, username, password_hash, role) VALUES ($1,$2,$3,$4) RETURNING id,email,username,password_hash,role", email, username, passwordHash, role).Scan(&u.ID,&u.Email,&u.Username,&u.PasswordHash,&u.Role)
-	if err != nil { return User{}, fmt.Errorf("create user: %w", err) }
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" { return User{}, ErrUserAlreadyExists }
+		return User{}, fmt.Errorf("create user: %w", err)
+	}
 	return u,nil
 }
 
