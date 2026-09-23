@@ -15,6 +15,8 @@ import (
 )
 
 var ErrInvalidCredentials = errors.New("invalid credentials")
+var ErrInvalidRegistrationCode = errors.New("invalid registration code")
+var ErrInvalidRegistrationData = errors.New("invalid registration data")
 
 type AuthService struct { repo repository.AuthRepository }
 
@@ -22,8 +24,8 @@ func NewAuthService(repo repository.AuthRepository) *AuthService { return &AuthS
 
 func (s *AuthService) Register(ctx context.Context,email,username,password,registrationCode,expectedCode string)(repository.User,string,error){
 	email=strings.TrimSpace(email); username=strings.TrimSpace(username)
-	if expectedCode=="" || registrationCode!=expectedCode{return repository.User{},"",ErrInvalidCredentials}
-	if email==""||username==""||len(password)<8{return repository.User{},"",ErrInvalidCredentials}
+	if expectedCode=="" || registrationCode!=expectedCode{return repository.User{},"",ErrInvalidRegistrationCode}
+	if email==""||username==""||len(password)<8{return repository.User{},"",ErrInvalidRegistrationData}
 	hash,err:=bcrypt.GenerateFromPassword([]byte(password),bcrypt.DefaultCost); if err!=nil{return repository.User{},"",err}
 	user,err:=s.repo.CreateUser(ctx,email,username,string(hash),"reader"); if err!=nil{return repository.User{},"",err}
 	token,err:=newToken(); if err!=nil{return repository.User{},"",err}
