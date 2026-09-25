@@ -1,204 +1,338 @@
-ARQUITECTURA.MD — Blueprint del Backend Unificado (Ule & Tonalmaster)
-Principio Rector: El contenido y los servicios cambian; la interfaz no debe enterarse de dónde provienen. Una sola API ligera en Go con PostgreSQL para alimentar el ecosistema educativo y la red social calendárica.
+# Arquitectura del Backend — ULE & Tonalmaster
 
-1. Principios SOLID Aplicados al Backend en Go
-Para garantizar un código limpio, mantenible y escalable, la arquitectura del backend aplica estrictamente los principios SOLID:
+## 1. Propósito
 
-S (Single Responsibility Principle - Principio de Responsabilidad Única): Cada paquete tiene un propósito exclusivo. Los controladores (handlers) solo manejan solicitudes HTTP y validaciones de entrada; los repositorios (repository) solo interactúan con la base de datos; los servicios de conversión (calendars) contienen la lógica matemática pura de los cómputos mesoamericanos.
+Este repositorio contiene una API modular en Go que integra los dominios de **ULE** y **Tonalmaster**, con PostgreSQL como persistencia.
 
-O (Open/Closed Principle - Principio de Abierto/Cerrado): El sistema está abierto a la extensión (por ejemplo, añadir nuevos sistemas calendáricos como una nueva variante del Tonalpohualli o nuevos tipos de contenido en Ule) sin necesidad de modificar el código existente de los controladores principales.
+La arquitectura busca mantener desacoplados:
 
-L (Liskov Substitution Principle - Principio de Sustitución de Liskov): Los accesos a datos se definen mediante interfaces pequeñas y específicas por dominio (`CalendarRepository`, `UserRepository`, etc.). Cualquier implementación (PostgreSQL, mock tests, etc.) puede sustituir a otra sin romper la capa de negocio.
+- la interfaz HTTP y el contrato externo;
+- la lógica de negocio;
+- la persistencia;
+- los cálculos calendáricos.
 
-I (Interface Segregation Principle - Principio de Segregación de Interfaces): Se evitan interfaces monolíticas. Se prefieren contratos pequeños y específicos por dominio (ArticleService, CalendarService, AuthService).
+El backend expone una sola API y no depende de que el frontend conozca la estructura interna de la aplicación.
 
-D (Dependency Inversion Principle - Principio de Inversión de Dependencias): Los controladores no instancian directamente las conexiones a la base de datos ni los repositorios; estos se inyectan a través de sus constructores utilizando interfaces.
+---
 
-2. Experiencia "Like Vikunja": Despliegue con un Solo Comando
-El proyecto se despliega de forma autónoma mediante Docker Compose. No requiere configuraciones complejas en el sistema operativo anfitrión.
+## 2. Principios arquitectónicos
 
-El archivo `docker-compose.yml` en la raíz define únicamente `db` (PostgreSQL), `migrate` (migraciones versionadas) y `api`. Las variables de entorno que consume (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`, `APP_ENV`, `APP_HOST`, `APP_PORT`, `DATABASE_URL`, `CORS_ALLOWED_ORIGINS`) están documentadas en `.env.example`; ese archivo y `docker-compose.yml` son la fuente de verdad.
+No se adopta una implementación dogmática de SOLID. Se aplican, de forma práctica, estos principios:
 
-Para ponerlo en marcha:
-1. Copiar el archivo de entorno `.env.example` a `.env`.
-2. Ejecutar en la terminal:
+### Responsabilidad única
 
-```bash
-docker compose up --build -d
-```
+Cada capa tiene una responsabilidad clara:
 
-3. El servicio `migrate` aplica automáticamente todas las migraciones pendientes antes de iniciar la API.
+- **handlers**: HTTP, decodificación de entrada, validación propia del transporte y adaptación entre DTOs externos y modelos internos.
+- **services**: reglas de negocio, autorización y coordinación de operaciones.
+- **repository**: acceso a PostgreSQL.
+- **config**: configuración de ejecución.
+- **calendars**: lógica de cómputo calendárico y funciones relacionadas con el dominio.
 
-La base de datos y la API estarán listas y comunicadas de manera interna mediante la red de Compose.
+### Dependencias hacia abstracciones
 
-### Acceso externo a PostgreSQL
+Cuando una dependencia necesita sustituirse o aislarse para pruebas, se utilizan interfaces pequeñas en lugar de acoplar la lógica de negocio a una implementación concreta.
 
-PostgreSQL se publica en el host mediante `POSTGRES_PORT` (por defecto `5432`) con el mapeo:
+### Separación de contrato externo e implementación interna
 
-```text
-0.0.0.0:${POSTGRES_PORT:-5432} -> PostgreSQL:5432
-```
+El contrato HTTP de ULE utiliza las claves JSON definidas por el frontend, aunque los modelos y nombres internos de Go siguen las convenciones idiomáticas del lenguaje.
 
-Esto permite que **pgAdmin 4 Desktop, instalado fuera del proyecto**, se conecte al PostgreSQL del host desde otra máquina usando la IP o nombre de red del servidor, el puerto publicado, la base, el usuario y la contraseña.
-
-El hostname `db` es únicamente un nombre DNS interno de Docker Compose. No debe utilizarse desde una máquina externa.
-
-La publicación del puerto debe complementarse con las reglas de firewall/red del host. La arquitectura del proyecto no incluye un servicio pgAdmin ni una interfaz web de administración de PostgreSQL.
-
-3. Esquema de Base de Datos (PostgreSQL)
-
-**Estado:** Tonalmaster y el contenido público Ule ya están implementados en el backend. La escritura editorial Ule queda para la Fase 10 y requerirá autenticación/autorización.
-Estructura relacional normalizada que unifica los dominios de educación, catálogos y sistemas calendáricos sociales.
-
-SQL
--- Usuarios unificados (para Tonalmaster y panel administrativo de Ule)
-CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(255) NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    username VARCHAR(100) UNIQUE NOT NULL,
-    avatar_url VARCHAR(255),
-    role VARCHAR(50) NOT NULL DEFAULT 'reader' CHECK (role IN ('reader', 'contributor', 'admin')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- ULE: Artículos educativos
-CREATE TABLE articles (
-    id VARCHAR(100) PRIMARY KEY,
-    titulo VARCHAR(255) NOT NULL,
-    autor VARCHAR(150) NOT NULL,
-    fecha DATE NOT NULL,
-    resumen TEXT NOT NULL,
-    contenido_html TEXT NOT NULL,
-    imagen_destacada VARCHAR(255),
-    categoria VARCHAR(100) NOT NULL,
-    etiquetas TEXT[],
-    visible BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- ULE: Bibliografía
-CREATE TABLE bibliography (
-    id VARCHAR(100) PRIMARY KEY,
-    titulo VARCHAR(255) NOT NULL,
-    autor VARCHAR(150) NOT NULL,
-    anio INTEGER,
-    tipo VARCHAR(50),
-    referencia TEXT,
-    enlace VARCHAR(255)
-);
-
--- ULE: Relación muchos a muchos (Artículo ↔ Bibliografía)
-CREATE TABLE article_bibliography (
-    article_id VARCHAR(100) REFERENCES articles(id) ON DELETE CASCADE,
-    bibliography_id VARCHAR(100) REFERENCES bibliography(id) ON DELETE CASCADE,
-    PRIMARY KEY (article_id, bibliography_id)
-);
-
--- ULE: Catálogos y piezas
-CREATE TABLE catalogs (
-    id VARCHAR(100) PRIMARY KEY,
-    titulo VARCHAR(255) NOT NULL,
-    descripcion TEXT
-);
-
-CREATE TABLE catalog_items (
-    id VARCHAR(100) PRIMARY KEY,
-    catalog_id VARCHAR(100) REFERENCES catalogs(id) ON DELETE CASCADE,
-    titulo VARCHAR(255) NOT NULL,
-    categoria VARCHAR(100),
-    imagen VARCHAR(255),
-    detalles JSONB
-);
-
--- ULE: Anuncios contextuales
-CREATE TABLE ads (
-    id VARCHAR(100) PRIMARY KEY,
-    titulo VARCHAR(255),
-    imagen VARCHAR(255),
-    enlace VARCHAR(255),
-    paginas TEXT[],
-    fecha_inicio DATE,
-    fecha_fin DATE,
-    activo BOOLEAN DEFAULT TRUE
-);
-
--- TONALMASTER: Sistemas de Cómputo Calendárico
-CREATE TABLE calendar_systems (
-    id VARCHAR(50) PRIMARY KEY, -- ej: 'tonalpohualli_caso', 'tonalpohualli_mesa', 'tzolkin_gmt'
-    nombre VARCHAR(100) NOT NULL,
-    autor_correlacion VARCHAR(150),
-    jdn_base INTEGER,
-    descripcion TEXT
-);
-
--- TONALMASTER: Interpretaciones sociales en fechas específicas
-CREATE TABLE interpretations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    calendar_system_id VARCHAR(50) NOT NULL REFERENCES calendar_systems(id) ON DELETE CASCADE,
-    target_date DATE NOT NULL,
-    contenido TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- TONALMASTER: Eventos de usuarios en los calendarios
-CREATE TABLE events (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    calendar_system_id VARCHAR(50) NOT NULL REFERENCES calendar_systems(id) ON DELETE CASCADE,
-    target_date DATE NOT NULL,
-    titulo VARCHAR(255) NOT NULL,
-    descripcion TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-4. Contrato de datos Ule
-
-El contrato externo y vinculante del frontend Ule vive exclusivamente en `docs/contrato_datos_ule.md`. Este repositorio no duplica allí sus DTOs. Si cambia el contrato, se actualiza ese archivo y se verifica el adaptador del servicio Ule.
-
-La API pública Ule usa rutas en inglés y claves JSON en español según ese contrato. El contenido público es de solo lectura y no requiere autenticación.
-
-5. Seguridad y sesiones
-
-La autenticación existente usa sesiones opacas almacenadas en PostgreSQL. Las contraseñas se almacenan como hash seguro y los endpoints protegidos pasan por middleware de autenticación/autorización. CORS usa orígenes explícitos y nunca `*`.
-
-El futuro registro editorial tendrá una particularidad temporal: `POST /api/v1/auth/register` requerirá un código de verificación estático. **Ese código solo controla la creación de cuentas. No participa en el login.** El login desde el inicio será el flujo normal de autenticación existente. El código podrá migrarse posteriormente a configuración/DB o retirarse cuando el registro público sea intencional.
-
-6. Integración frontend
-
-Ule se sirve desacoplado del backend. En desarrollo, XAMPP puede servir el frontend y Docker/WSL la API. `ULE.config.apiBaseUrl` apunta al backend y CORS permite explícitamente el origen del frontend.
-
-7. Evolución editorial
-
-La API pública Ule permanece de lectura. La futura API editorial autenticada añadirá escritura para artículos, bibliografía, catálogos, elementos de catálogo y anuncios. Las operaciones editoriales requieren sesión y autorización por rol; no se convierten en endpoints públicos.
-
-8. Estructura conceptual
+La conversión se realiza explícitamente en el borde HTTP:
 
 ```text
-handlers -> services -> repositories -> PostgreSQL
-                         ^
-                    interfaces
-
-frontend Ule -> HTTP API -> services -> repositories
-
-pgAdmin 4 Desktop (externo)
-              |
-              | TCP POSTGRES_PORT
-              v
-        PostgreSQL del host
+Frontend ULE
+    |
+    | HTTP
+    v
+Handler
+    |
+    | DTO del contrato ULE
+    | (JSON en español)
+    v
+Adaptador
+    |
+    | modelo interno Go
+    v
+Service
+    |
+    v
+Repository
+    |
+    v
+PostgreSQL
 ```
 
-Las migraciones son la fuente reproducible del esquema. Los datos editoriales normales entrarán por la API editorial; solo los datos fijos de infraestructura/demo justifican seeds mediante migración.
+Esto permite evolucionar la implementación interna sin romper el contrato público.
 
-9. Decisiones fuera del alcance inmediato
+---
 
-No introducir todavía microservicios, Redis, Kubernetes, CMS genérico ni un sistema complejo de permisos. Mantener una API modular y pequeña hasta que una necesidad real justifique otra abstracción.
+## 3. Estructura actual del proyecto
 
-La administración mediante pgAdmin 4 es externa al proyecto: no es un servicio Docker, no forma parte de la API y no es un panel editorial para usuarios finales.
+La organización relevante del backend es:
 
-10. Verificación del dominio CASO
+```text
+.
+├── cmd/
+│   └── server/
+│       └── main.go
+├── internal/
+│   ├── config/
+│   ├── handlers/
+│   ├── repository/
+│   ├── services/
+│   └── ...
+├── migrations/
+├── docs/
+│   ├── arquitectura.md
+│   └── contrato_datos_ule.md
+├── Dockerfile
+├── docker-compose.yml
+└── .env.example
+```
 
-El sistema CASO usa como ancla 13 de agosto de 1521 (calendario juliano), JDN 2276828. La conversión de 2026-05-18 produce JDN 2461179 y el resultado documentado por los tests es 12-Cozcacuauhtli, trecena 1. El señor de la noche permanece sin valor hasta incorporar una tabla/fuente verificable.
+El detalle exacto de archivos puede crecer con el proyecto. La separación anterior representa responsabilidades, no una obligación de mantener un número fijo de paquetes.
+
+---
+
+## 4. Flujo de una petición
+
+### Lectura pública
+
+```text
+Frontend ULE
+    -> HTTP API
+    -> Handler
+    -> Service
+    -> Repository
+    -> PostgreSQL
+```
+
+Los handlers no contienen consultas SQL ni reglas de negocio complejas.
+
+### Escritura editorial
+
+Las operaciones editoriales pasan por autenticación y autorización antes de llegar a la lógica de negocio:
+
+```text
+Frontend / cliente editorial
+    -> autenticación
+    -> autorización por rol
+    -> Handler
+    -> DTO -> modelo interno
+    -> Service
+    -> Repository
+    -> PostgreSQL
+```
+
+Los roles editoriales actualmente utilizados son `contributor` y `admin`.
+
+---
+
+## 5. Contrato HTTP de ULE
+
+El contrato externo y vinculante vive en:
+
+```text
+docs/contrato_datos_ule.md
+```
+
+Ese documento es la fuente de verdad para la integración con el frontend ULE.
+
+Reglas importantes:
+
+- las **rutas HTTP son en inglés**;
+- las **claves JSON son en español**, exactamente como aparecen en el contrato;
+- los nombres con acentos forman parte del contrato cuando así están definidos;
+- el frontend no debe depender de nombres internos de Go ni de nombres de columnas PostgreSQL;
+- los DTOs HTTP deben adaptarse explícitamente a los modelos internos;
+- los cambios de contrato deben actualizarse de forma coordinada con el frontend y sus pruebas.
+
+La API pública de ULE es de lectura y expone únicamente contenido que corresponde a registros visibles.
+
+### Endpoints públicos actuales
+
+```text
+GET /api/v1/articles
+GET /api/v1/articles/{id}
+
+GET /api/v1/bibliography
+
+GET /api/v1/catalogs
+GET /api/v1/catalogs/{id}
+
+GET /api/v1/ads
+```
+
+No se debe introducir paginación, filtros u otras extensiones en el contrato únicamente por conveniencia interna: deben responder a una necesidad real y quedar documentadas en el contrato.
+
+---
+
+## 6. API editorial actual
+
+La escritura de contenido ULE ya forma parte de la implementación actual.
+
+Endpoints protegidos:
+
+```text
+POST   /api/v1/articles
+PUT    /api/v1/articles/{id}
+DELETE /api/v1/articles/{id}
+
+POST   /api/v1/bibliography
+PUT    /api/v1/bibliography/{id}
+DELETE /api/v1/bibliography/{id}
+
+POST   /api/v1/catalogs
+PUT    /api/v1/catalogs/{id}
+DELETE /api/v1/catalogs/{id}
+
+POST   /api/v1/catalogs/{id}/items
+PUT    /api/v1/catalogs/{id}/items/{item_id}
+DELETE /api/v1/catalogs/{id}/items/{item_id}
+
+POST   /api/v1/ads
+PUT    /api/v1/ads/{id}
+DELETE /api/v1/ads/{id}
+```
+
+Estas operaciones requieren una sesión válida y autorización editorial.
+
+La existencia de estos endpoints no cambia el contrato de lectura pública: el frontend público continúa consumiendo los endpoints GET.
+
+---
+
+## 7. Persistencia
+
+PostgreSQL es la base de datos principal del backend.
+
+Las **migraciones de `migrations/` son la fuente de verdad del esquema**. Este documento no duplica las sentencias SQL de creación de tablas para evitar que la documentación y la implementación diverjan.
+
+Los repositorios son responsables de:
+
+- ejecutar consultas;
+- mapear resultados de PostgreSQL a modelos internos;
+- manejar errores de persistencia;
+- mantener fuera de los handlers los detalles de SQL.
+
+Los servicios no deben depender de nombres de columnas ni construir consultas SQL directamente.
+
+---
+
+## 8. Autenticación, sesiones y autorización
+
+La autenticación utiliza sesiones opacas almacenadas en PostgreSQL.
+
+Las contraseñas se almacenan mediante hash seguro y no se conservan en texto plano.
+
+El flujo general es:
+
+```text
+registro/login
+    -> autenticación
+    -> sesión
+    -> cookie/sesión HTTP
+    -> middleware
+    -> usuario autenticado
+    -> autorización por rol
+```
+
+El registro utiliza el código configurado mediante `REGISTRATION_CODE`. Este código controla la creación de cuentas y no forma parte del proceso normal de login.
+
+Las operaciones editoriales requieren rol `contributor` o `admin`.
+
+Los secretos, contraseñas y tokens no deben escribirse en logs.
+
+---
+
+## 9. Despliegue actual
+
+El despliegue local utiliza Docker Compose.
+
+Los servicios actuales son:
+
+```text
+db       PostgreSQL
+migrate  aplicación de migraciones
+api      servidor Go
+```
+
+El servicio `migrate` aplica las migraciones antes de que la API quede disponible.
+
+El puerto de PostgreSQL se publica en el host mediante `POSTGRES_PORT`. El nombre DNS `db` solamente es válido dentro de la red de Docker Compose.
+
+### Administración de PostgreSQL
+
+**pgAdmin 4 no forma parte del proyecto ni de Docker Compose.**
+
+Puede utilizarse como aplicación externa para conectarse al puerto publicado de PostgreSQL.
+
+La arquitectura no incluye un panel web de administración de base de datos.
+
+---
+
+## 10. Integración con el frontend
+
+ULE se mantiene desacoplado del backend.
+
+El frontend conoce únicamente:
+
+- la URL base de la API;
+- el contrato HTTP;
+- los datos definidos por dicho contrato;
+- el mecanismo de autenticación necesario para las operaciones protegidas.
+
+No debe conocer:
+
+- consultas SQL;
+- tablas de PostgreSQL;
+- nombres internos de modelos Go;
+- detalles de repositorios;
+- estructura interna de servicios.
+
+El adaptador HTTP del backend es el punto responsable de traducir entre el contrato externo y la implementación interna.
+
+---
+
+## 11. Guía para continuar el desarrollo
+
+Las decisiones de implementación deben seguir estas reglas:
+
+1. **Primero revisar el contrato** si el cambio afecta datos o endpoints de ULE.
+2. **Mantener separados DTOs y modelos internos** cuando sus nombres o formas tengan objetivos diferentes.
+3. **Mantener la lógica de negocio en services**, no en handlers.
+4. **Mantener SQL y detalles de PostgreSQL en repositories**.
+5. **Actualizar las migraciones** cuando cambie persistentemente el esquema.
+6. **Agregar pruebas de contrato** cuando una modificación pueda afectar la integración con ULE.
+7. **Evitar duplicar información estructural** entre documentación y migraciones.
+8. **Preferir cambios pequeños y verificables** sobre refactorizaciones amplias.
+9. **No introducir infraestructura adicional** (microservicios, Redis, Kubernetes, CMS u otras capas) sin una necesidad técnica concreta.
+10. **Documentar las decisiones permanentes**, no el plan temporal utilizado para llegar a ellas.
+
+Las planeaciones de implementación, tareas temporales y pasos de desarrollo pertenecen a documentos de trabajo separados y no forman parte de este documento arquitectónico.
+
+---
+
+## 12. Dominio Tonalmaster
+
+El dominio calendárico mantiene su lógica separada de HTTP y persistencia.
+
+Los cálculos deben permanecer en componentes de dominio independientes de handlers y consultas SQL. Las correlaciones, constantes y resultados verificables deben estar respaldados por código y pruebas.
+
+El sistema CASO actualmente documenta y prueba su ancla de conversión y sus resultados de referencia. Los datos calendáricos que todavía requieran una fuente verificable no deben representarse como valores definitivos.
+
+---
+
+## 13. Principio de evolución
+
+La arquitectura actual debe entenderse como una API modular, no como una arquitectura distribuida.
+
+Mientras la separación entre HTTP, negocio, persistencia y dominio siga resolviendo las necesidades reales del proyecto, no se debe añadir complejidad estructural sin una razón concreta.
+
+Cuando una nueva necesidad requiera modificar esta arquitectura, el cambio debe evaluarse contra:
+
+- el contrato público existente;
+- la separación de responsabilidades;
+- la facilidad de prueba;
+- la simplicidad operativa;
+- la compatibilidad con el frontend;
+- la necesidad real que motiva la nueva abstracción.
